@@ -5,12 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UserService } from "@/services/user.service";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/toast";
 import { Monitor, Moon, Sun } from "lucide-react";
 
 export function AppearanceSettings() {
   const { profile } = useAuth();
-  const { toast } = useToast();
   const { setTheme, theme } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -26,13 +25,13 @@ export function AppearanceSettings() {
           theme: newTheme,
         },
       });
-      toast({
+      toast.add({
         title: "Theme updated",
         description: `Theme has been set to ${newTheme}.`,
       });
     } catch (error) {
-      toast({
-        variant: "destructive",
+      toast.add({
+        type: "error",
         title: "Error",
         description: "Failed to save theme preference.",
       });

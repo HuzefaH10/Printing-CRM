@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthService } from "@/services/auth.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/toast";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -19,7 +19,6 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
@@ -33,13 +32,13 @@ export default function ForgotPasswordPage() {
     try {
       await AuthService.resetPassword(data.email);
       setIsSubmitted(true);
-      toast({
+      toast.add({
         title: "Reset link sent",
         description: "If an account exists, you will receive an email shortly.",
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
+      toast.add({
+        type: "error",
         title: "Error",
         description: "Failed to send reset email. Please try again.",
       });

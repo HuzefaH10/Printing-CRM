@@ -9,7 +9,7 @@ import { UserService } from "@/services/user.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/toast";
 import { Loader2 } from "lucide-react";
 
 const profileSchema = z.object({
@@ -22,7 +22,6 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export function ProfileSettings() {
   const { profile } = useAuth();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<ProfileFormValues>({
@@ -46,13 +45,13 @@ export function ProfileSettings() {
           language: data.language,
         },
       });
-      toast({
+      toast.add({
         title: "Profile updated",
         description: "Your profile changes have been saved.",
       });
     } catch (error) {
-      toast({
-        variant: "destructive",
+      toast.add({
+        type: "error",
         title: "Error",
         description: "Failed to update profile.",
       });

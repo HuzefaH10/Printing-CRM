@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthService } from "@/services/auth.service";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/toast";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -22,7 +22,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -36,14 +35,14 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await AuthService.loginWithEmail(data.email, data.password);
-      toast({
+      toast.add({
         title: "Welcome back",
         description: "You have successfully signed in.",
       });
       router.push("/dashboard");
     } catch (error: any) {
-      toast({
-        variant: "destructive",
+      toast.add({
+        type: "error",
         title: "Authentication Failed",
         description: error.message || "Invalid credentials. Please try again.",
       });
@@ -56,14 +55,14 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     try {
       await AuthService.loginWithGoogle();
-      toast({
+      toast.add({
         title: "Welcome back",
         description: "You have successfully signed in with Google.",
       });
       router.push("/dashboard");
     } catch (error: any) {
-      toast({
-        variant: "destructive",
+      toast.add({
+        type: "error",
         title: "Google Sign-in Failed",
         description: error.message || "An error occurred during Google sign-in.",
       });
