@@ -1,36 +1,76 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Company } from "@/features/companies/models/company";
+import { companyRepo } from "@/features/companies/services/company.repository";
+import { DataTable } from "@/components/ui/data-table/DataTable";
+import { companyColumns } from "@/features/companies/components/CompanyListTable";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
+import { useModal } from "@/hooks/use-modal";
 
 export default function CompaniesPage() {
+  const router = useRouter();
+  const modal = useModal();
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Load companies
+    const unsubscribe = companyRepo.subscribe(
+      [],
+      { orderBy: "name", orderDirection: "asc", limit: 100 },
+      (data) => {
+        setCompanies(data);
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error(error);
+        setIsLoading(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  const handleRowClick = (company: Company) => {
+    router.push(`/companies/${company.id}`);
+  };
+
+  const handleCreateNew = () => {
+    // We would typically open a slide-over or route to a create page
+    alert("Create new company placeholder");
+  };
+
   return (
     <div className="flex flex-col h-full space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Companies</h2>
-          <p className="text-muted-foreground mt-2">
-            Manage your companies and associated records here.
+          <h1 className="text-3xl font-bold tracking-tight">Companies</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage your entire business network and organizational intelligence.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            New Companies
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" className="hidden md:flex">
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
+          <Button onClick={handleCreateNew}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Company
           </Button>
         </div>
       </div>
-      
-      {/* Empty State Placeholder */}
-      <div className="flex flex-col items-center justify-center flex-1 border rounded-lg border-dashed bg-card/50">
-        <div className="flex flex-col items-center justify-center text-center p-8 max-w-sm">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-            <span className="text-2xl opacity-50">📋</span>
-          </div>
-          <h3 className="text-xl font-semibold mb-2">No companies found</h3>
-          <p className="text-sm text-muted-foreground mb-6">
-            You don't have any companies yet. Create your first one to get started with the new OS.
-          </p>
-          <Button variant="outline">Learn More</Button>
-        </div>
+
+      <div className="bg-card rounded-xl border shadow-sm">
+        <DataTable
+          columns={companyColumns}
+          data={companies}
+          isLoading={isLoading}
+          searchKey="name"
+          onRowClick={handleRowClick}
+        />
       </div>
     </div>
   );
