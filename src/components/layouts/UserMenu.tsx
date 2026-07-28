@@ -29,18 +29,16 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <div className="w-8 h-8 rounded-full bg-secondary border flex items-center justify-center overflow-hidden">
-            {profile.photoURL ? (
-              <img src={profile.photoURL} alt={profile.displayName || "User"} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-xs uppercase">
-                {(profile.displayName || profile.email || "U").charAt(0)}
-              </span>
-            )}
-          </div>
-        </Button>
+      <DropdownMenuTrigger className="relative h-8 w-8 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <div className="w-8 h-8 rounded-full bg-secondary border flex items-center justify-center overflow-hidden">
+          {profile.photoURL ? (
+            <img src={profile.photoURL} alt={profile.displayName || "User"} className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-xs uppercase">
+              {(profile.displayName || profile.email || "U").charAt(0)}
+            </span>
+          )}
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
