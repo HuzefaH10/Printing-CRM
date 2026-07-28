@@ -17,8 +17,29 @@ export interface ProductionProduct {
   // Embedded Artwork Tracking
   artworkStatus: "Pending" | "Received" | "In Review" | "Approved" | "Rejected" | string;
   artworkVersion: number;
+  artworkRevisionCount?: number;
   artworkApprovedBy?: string;
   artworkApprovalDate?: Date | string;
+  artworkCustomerComments?: string;
+  artworkInternalComments?: string;
+  artworkFileUrlPlaceholder?: string;
+}
+
+export interface JobMaterial {
+  type: "Paper" | "Ink" | "Lamination" | "Binding" | "Packaging" | string;
+  name: string;
+  vendor?: string;
+  batchPlaceholder?: string;
+  consumptionPlaceholder?: number;
+}
+
+export interface WorkAssignments {
+  productionManagerId?: string;
+  machineOperatorId?: string;
+  finishingTeamId?: string;
+  packagingTeamId?: string;
+  qualityInspectorId?: string;
+  deliveryCoordinatorId?: string;
 }
 
 export interface JobStage {
@@ -81,6 +102,9 @@ export interface ProductionJob extends BaseModel {
   
   qualityControl?: QualityControl;
   delivery?: JobDelivery;
+  
+  materials?: JobMaterial[];
+  assignments?: WorkAssignments;
 
   tags: string[];
   notes?: string;

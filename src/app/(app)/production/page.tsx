@@ -5,8 +5,10 @@ import { ProductionJob } from "@/features/production/models/job";
 import { productionRepo } from "@/features/production/services/production.repository";
 import { ProductionJobListTable } from "@/features/production/components/ProductionJobListTable";
 import { Button } from "@/components/ui/button";
-import { Plus, Download, Printer, Factory, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Plus, Download, Printer, Factory, Clock, CheckCircle2, AlertTriangle, LayoutList, LayoutGrid } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProductionKanbanBoard } from "@/features/production/components/ProductionKanbanBoard";
 
 export default function ProductionPage() {
   const [jobs, setJobs] = useState<ProductionJob[]>([]);
@@ -103,9 +105,24 @@ export default function ProductionPage() {
         </div>
       </div>
 
-      <div className="bg-card rounded-lg border shadow-sm">
-        <ProductionJobListTable jobs={activeJobs} isLoading={isLoading} />
-      </div>
+      <Tabs defaultValue="kanban" className="w-full">
+        <div className="flex justify-between items-center mb-4">
+          <TabsList>
+            <TabsTrigger value="kanban" className="flex items-center gap-2"><LayoutGrid className="w-4 h-4" /> Board</TabsTrigger>
+            <TabsTrigger value="list" className="flex items-center gap-2"><LayoutList className="w-4 h-4" /> List</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="kanban" className="mt-0">
+          <ProductionKanbanBoard jobs={activeJobs} />
+        </TabsContent>
+
+        <TabsContent value="list" className="mt-0">
+          <div className="bg-card rounded-lg border shadow-sm">
+            <ProductionJobListTable jobs={activeJobs} isLoading={isLoading} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

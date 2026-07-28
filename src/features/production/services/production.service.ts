@@ -25,16 +25,24 @@ export class ProductionService {
       "Prepress",
       "Proof Preparation",
       "Proof Approval",
+      "Plate Making Placeholder",
       "Paper Allocation",
       "Printing",
+      "Drying Placeholder",
       "Cutting",
       "Folding",
       "Binding",
       "Lamination",
+      "Foiling",
+      "Embossing",
+      "Spot UV",
+      "Die Cutting",
       "Packing",
       "Quality Inspection",
       "Dispatch Ready",
-      "Delivered"
+      "Delivered",
+      "Completed",
+      "Cancelled"
     ];
 
     return stages.map((name, idx) => ({

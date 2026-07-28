@@ -88,12 +88,19 @@ export default function ProductionJobPage() {
       <Tabs defaultValue="stages" className="w-full">
         <TabsList className="mb-4 flex-wrap h-auto">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="products">Products & Artwork</TabsTrigger>
+          <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="stages">Production Stages</TabsTrigger>
+          <TabsTrigger value="artwork">Artwork</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
+          <TabsTrigger value="assignments">Assignments</TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="qc">Quality Control</TabsTrigger>
           <TabsTrigger value="delivery">Delivery</TabsTrigger>
-          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          <TabsTrigger value="attachments">Attachments</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview">
@@ -108,7 +115,15 @@ export default function ProductionJobPage() {
         <TabsContent value="products">
           <Card>
             <CardContent className="p-12 text-center text-muted-foreground py-24">
-              <p>Products and Artwork Management editor goes here.</p>
+              <p>Products Management editor goes here.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="artwork">
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground py-24">
+              <p>Artwork Tracking and Approval editor goes here.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -122,6 +137,14 @@ export default function ProductionJobPage() {
             <CardContent className="p-12 text-center text-muted-foreground py-24">
               <Calendar className="w-12 h-12 mx-auto mb-4 opacity-20" />
               <p>Production Schedule integration placeholder.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="assignments">
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground py-24">
+              <p>Work Assignments tracking goes here.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -149,6 +172,46 @@ export default function ProductionJobPage() {
             <CardContent className="p-12 text-center text-muted-foreground py-24">
               <p>Activity Engine Integration placeholder.</p>
               <p className="text-xs mt-2">The Universal Activity Engine will render a timeline tracking every step of this production job.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="activities">
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground py-24">
+              <p>Universal Activity Engine Integration placeholder.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="attachments">
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground py-24">
+              <p>File attachments and resources go here.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notes">
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground py-24">
+              <p>Job Notes go here.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground py-24">
+              <p>Production Analytics and Bottleneck Tracking placeholder.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground py-24">
+              <p>Job settings go here.</p>
             </CardContent>
           </Card>
         </TabsContent>
