@@ -6,7 +6,9 @@ export type AppEventType =
   | "NOTIFICATION_CREATED"
   | "MODAL_OPENED"
   | "MODAL_CLOSED"
-  | "THEME_CHANGED";
+  | "THEME_CHANGED"
+  | "COMPANY_ACTIVITY_LOGGED"
+  | "COMPANY_ACTIVITY_COMPLETED";
 
 export interface AppEvent<T = any> {
   type: AppEventType;

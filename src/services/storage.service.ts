@@ -72,7 +72,7 @@ export class StorageService {
           if (onProgress) {
             onProgress({
               progress,
-              status: snapshot.state,
+              status: snapshot.state as any,
             });
           }
         },

@@ -7,6 +7,7 @@ import { companyRepo } from "@/features/companies/services/company.repository";
 import { IntelligenceScoreCard } from "@/features/companies/components/IntelligenceScoreCard";
 import { PrintingProfileCard } from "@/features/companies/components/PrintingProfileCard";
 import { ContactSummaryCard } from "@/features/companies/components/ContactSummaryCard";
+import { UpcomingActivitiesWidget } from "@/features/activities/components/UpcomingActivitiesWidget";
 import { Loader2 } from "lucide-react";
 
 export default function CompanyOverviewPage() {
@@ -68,6 +69,10 @@ export default function CompanyOverviewPage() {
 
       {/* Right Column - Deep Data */}
       <div className="xl:col-span-2 space-y-6">
+        
+        {/* NEW: Activities Widget */}
+        <UpcomingActivitiesWidget companyId={company.id} limit={4} />
+
         {/* Core Details Panel */}
         <div className="bg-card border shadow-sm rounded-xl p-6">
           <h3 className="font-semibold tracking-tight text-lg mb-4 border-b border-border pb-4">Company Details</h3>

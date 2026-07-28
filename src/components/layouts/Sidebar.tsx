@@ -23,6 +23,7 @@ import {
 
 const NAV_ITEMS = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Activities", href: "/activities", icon: CalendarDays },
   { name: "Companies", href: "/companies", icon: Building2 },
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Leads", href: "/leads", icon: UserPlus },
