@@ -38,6 +38,7 @@ const NAV_GROUPS = [
   {
     group: "Sales & CRM",
     items: [
+      { name: "Prospects", href: "/sales/prospects", icon: Target },
       { name: "Companies", href: "/companies", icon: Building2 },
       { name: "Contacts", href: "/contacts", icon: Users },
       { name: "Leads", href: "/leads", icon: UserPlus },
