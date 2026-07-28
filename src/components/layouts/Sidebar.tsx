@@ -20,7 +20,8 @@ import {
   CheckSquare, 
   Settings,
   Activity,
-  ShoppingCart
+  ShoppingCart,
+  DollarSign
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
   { name: "Production", href: "/production", icon: Factory },
   { name: "Inventory", href: "/inventory", icon: PackageSearch },
   { name: "Procurement", href: "/procurement", icon: ShoppingCart },
+  { name: "Finance", href: "/finance", icon: DollarSign },
   { name: "Knowledge", href: "/knowledge", icon: BookOpen },
   { name: "Tender Center", href: "/tenders", icon: Gavel },
   { name: "Documents", href: "/documents", icon: Files },

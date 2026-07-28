@@ -76,6 +76,39 @@ export interface SupplierProfile {
   vendorCode?: string;
 }
 
+export interface CreditProfile {
+  creditLimit: number;
+  availableCredit: number;
+  usedCredit: number;
+  averagePaymentDays: number;
+  paymentReliabilityScore: number;
+  collectionRisk: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  creditStatus: "GOOD_STANDING" | "WARNING" | "HOLD";
+  holdStatus: boolean;
+  notes?: string;
+}
+
+export interface ReceivablesProfile {
+  outstandingBalance: number;
+  largestInvoice: number;
+  lastPaymentDate?: Date | string | null;
+  lastInvoiceDate?: Date | string | null;
+  averageInvoiceValue: number;
+  daysPastDue: number;
+  collectionPriority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  assignedCollectorId?: string;
+}
+
+export interface ProfitabilityMetrics {
+  lifetimeRevenue: number;
+  lifetimeGrossProfit: number;
+  averageMargin: number;
+  averageOrderValue: number;
+  repeatBusinessRate: number; // Percentage
+  profitRanking: "A" | "B" | "C" | "D";
+  relationshipValue: number; // Calculated score based on revenue + strategic value
+}
+
 export interface Company extends BaseModel {
   // Basic Info
   name: string;
@@ -103,6 +136,9 @@ export interface Company extends BaseModel {
   location: CompanyLocation;
   printingProfile?: PrintingProfile;
   supplierProfile?: SupplierProfile;
+  creditProfile?: CreditProfile;
+  receivables?: ReceivablesProfile;
+  profitability?: ProfitabilityMetrics;
   intelligence: IntelligenceScore;
   relationshipTracker: RelationshipTracker;
 
