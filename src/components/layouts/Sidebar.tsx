@@ -18,17 +18,18 @@ import {
   BarChart3, 
   CalendarDays, 
   CheckSquare, 
-  Settings 
+  Settings,
+  Activity
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Activities", href: "/activities", icon: CalendarDays },
-  { name: "Opportunities", href: "/opportunities", icon: Target },
   { name: "Companies", href: "/companies", icon: Building2 },
+  { name: "Opportunities", href: "/opportunities", icon: Target },
   { name: "Contacts", href: "/contacts", icon: Users },
-  { name: "Leads", href: "/leads", icon: UserPlus },
+  { name: "Activities", href: "/activities", icon: Activity },
   { name: "Quotations", href: "/quotations", icon: FileText },
+  { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Production", href: "/production", icon: Factory },
   { name: "Inventory", href: "/inventory", icon: PackageSearch },
   { name: "Knowledge", href: "/knowledge", icon: BookOpen },

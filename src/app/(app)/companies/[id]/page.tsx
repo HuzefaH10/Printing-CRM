@@ -65,7 +65,7 @@ export default function CompanyOverviewPage() {
           </div>
         </div>
 
-        <ContactSummaryCard />
+        <ContactSummaryCard companyId={id} />
       </div>
 
       {/* Right Column - Deep Data */}
