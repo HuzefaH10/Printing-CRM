@@ -74,17 +74,6 @@ export function Sidebar() {
           })}
         </nav>
       </div>
-      <div className="p-4 border-t">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors">
-          <div className="w-8 h-8 rounded-full bg-secondary border flex items-center justify-center overflow-hidden">
-            <span className="text-xs">U</span>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <p className="truncate text-foreground">Operator</p>
-            <p className="truncate text-xs opacity-70">operator@printingos.com</p>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

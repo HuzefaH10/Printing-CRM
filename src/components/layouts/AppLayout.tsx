@@ -2,8 +2,12 @@
 
 import { Sidebar } from "./Sidebar";
 import { TopNav } from "./TopNav";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { GlobalCommandPalette } from "./GlobalCommandPalette";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  useKeyboardShortcuts();
+  
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       <Sidebar />
@@ -13,6 +17,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <GlobalCommandPalette />
     </div>
   );
 }
