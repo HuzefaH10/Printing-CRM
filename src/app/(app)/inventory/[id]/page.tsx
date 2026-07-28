@@ -550,6 +550,9 @@ export default function InventoryItemPage() {
                 Preferred supplier, purchase history, lead time, average
                 cost, and price trends will be displayed here.
               </p>
+              <p className="text-xs mt-4">
+                Connects to the Procurement &amp; Supplier Intelligence Engine.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>

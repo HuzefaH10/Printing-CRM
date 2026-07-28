@@ -19,7 +19,8 @@ import {
   CalendarDays, 
   CheckSquare, 
   Settings,
-  Activity
+  Activity,
+  ShoppingCart
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { name: "Leads", href: "/leads", icon: UserPlus },
   { name: "Production", href: "/production", icon: Factory },
   { name: "Inventory", href: "/inventory", icon: PackageSearch },
+  { name: "Procurement", href: "/procurement", icon: ShoppingCart },
   { name: "Knowledge", href: "/knowledge", icon: BookOpen },
   { name: "Tender Center", href: "/tenders", icon: Gavel },
   { name: "Documents", href: "/documents", icon: Files },

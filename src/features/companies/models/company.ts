@@ -63,6 +63,19 @@ export interface RelationshipTracker {
   health: "POOR" | "FAIR" | "GOOD" | "EXCELLENT";
 }
 
+export interface SupplierProfile {
+  supplierCategory: string; // e.g., Paper Mills, Ink Suppliers
+  supplierSubcategory?: string;
+  supplierType: "MANUFACTURER" | "DISTRIBUTOR" | "WHOLESALER" | "SERVICE_PROVIDER" | string;
+  paymentTerms: string;
+  creditLimit?: number;
+  leadTimeDays: number;
+  preferredShippingMethod?: string;
+  incotermsPlaceholder?: string;
+  bankDetailsPlaceholder?: string;
+  vendorCode?: string;
+}
+
 export interface Company extends BaseModel {
   // Basic Info
   name: string;
@@ -89,8 +102,14 @@ export interface Company extends BaseModel {
   // Nested Objects
   location: CompanyLocation;
   printingProfile?: PrintingProfile;
+  supplierProfile?: SupplierProfile;
   intelligence: IntelligenceScore;
   relationshipTracker: RelationshipTracker;
+
+  // Roles
+  isCustomer: boolean;
+  isSupplier: boolean;
+  isPartner: boolean;
 
   // Metadata & Metrics
   companySize?: string;
