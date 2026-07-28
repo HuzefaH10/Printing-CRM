@@ -102,7 +102,7 @@ function CustomTooltip({ active, payload, label }: {
           <span className="font-semibold text-white tabular-nums">
             {entry.dataKey === "efficiency" || entry.dataKey === "waste"
               ? `${entry.value}%`
-              : `$${(entry.value / 1000).toFixed(0)}k`}
+              : `${(entry.value / 1000).toFixed(0)}k KWD`}
           </span>
         </div>
       ))}
@@ -210,7 +210,7 @@ export default function DashboardPage() {
                     Monthly Revenue
                   </p>
                   <h3 className="text-4xl font-extrabold tabular-nums text-foreground leading-none">
-                    $620k
+                    620k KWD
                   </h3>
                 </div>
                 <div className="w-11 h-11 bg-emerald-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
@@ -220,7 +220,7 @@ export default function DashboardPage() {
               <div className="mt-4 flex items-center gap-1.5 text-sm">
                 <ArrowUpRight className="w-4 h-4 text-emerald-400" />
                 <span className="text-emerald-400 font-semibold tabular-nums">+6.9%</span>
-                <span className="text-muted-foreground/50 ml-1 text-xs">vs target ($580k)</span>
+                <span className="text-muted-foreground/50 ml-1 text-xs">vs target (580k KWD)</span>
               </div>
             </div>
 
@@ -232,7 +232,7 @@ export default function DashboardPage() {
                     Active Pipeline
                   </p>
                   <h3 className="text-4xl font-extrabold tabular-nums text-foreground leading-none">
-                    $2.4M
+                    2.4M KWD
                   </h3>
                 </div>
                 <div className="w-11 h-11 bg-blue-500/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
@@ -308,7 +308,7 @@ export default function DashboardPage() {
                         axisLine={false}
                         tickLine={false}
                         tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.35)' }}
-                        tickFormatter={(value) => `$${value/1000}k`}
+                        tickFormatter={(value) => `${value/1000}k`}
                         width={55}
                       />
                       <Tooltip content={<CustomTooltip />} />
@@ -333,7 +333,7 @@ export default function DashboardPage() {
                   <AlertTriangle className="w-4.5 h-4.5 text-red-400 shrink-0 mt-0.5" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-red-300">Cash Flow Warning</p>
-                    <p className="text-xs text-red-400/70 mt-0.5 leading-relaxed">2 major clients are &gt;60 days overdue on $140k.</p>
+                    <p className="text-xs text-red-400/70 mt-0.5 leading-relaxed">2 major clients are &gt;60 days overdue on 140k KWD.</p>
                   </div>
                 </div>
                 
