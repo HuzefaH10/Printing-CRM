@@ -77,6 +77,24 @@ export default function CompanyOverviewPage() {
         {/* NEW: Opportunities Widget */}
         <ActiveOpportunitiesWidget companyId={company.id} limit={4} />
 
+        {/* NEW: Quotations Widget */}
+        <div className="bg-card border shadow-sm rounded-xl p-6 border-dashed bg-muted/10">
+          <h3 className="font-semibold tracking-tight text-lg mb-2">Recent Quotations</h3>
+          <p className="text-sm text-muted-foreground mb-4">Quotation Engine Integration Placeholder</p>
+          <div className="h-16 flex items-center justify-center text-muted-foreground bg-muted/30 rounded-lg text-sm">
+            Company Quotations will appear here.
+          </div>
+        </div>
+
+        {/* NEW: Production Widget */}
+        <div className="bg-card border shadow-sm rounded-xl p-6 border-dashed bg-muted/10">
+          <h3 className="font-semibold tracking-tight text-lg mb-2">Production Jobs</h3>
+          <p className="text-sm text-muted-foreground mb-4">Production Engine Integration Placeholder</p>
+          <div className="h-16 flex items-center justify-center text-muted-foreground bg-muted/30 rounded-lg text-sm">
+            Company Production Jobs will appear here.
+          </div>
+        </div>
+
         {/* Core Details Panel */}
         <div className="bg-card border shadow-sm rounded-xl p-6">
           <h3 className="font-semibold tracking-tight text-lg mb-4 border-b border-border pb-4">Company Details</h3>

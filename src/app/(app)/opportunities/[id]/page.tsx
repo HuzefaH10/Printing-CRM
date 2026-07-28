@@ -81,6 +81,15 @@ export default function OpportunityOverviewPage() {
 
       {/* Side Column */}
       <div className="space-y-6">
+        {/* Quotations */}
+        <div className="bg-card border rounded-xl p-6 shadow-sm border-dashed bg-muted/10">
+          <h3 className="font-semibold mb-4 tracking-tight">Quotations</h3>
+          <p className="text-sm text-muted-foreground mb-4">Quotation Engine Integration Placeholder</p>
+          <div className="h-12 flex items-center justify-center text-muted-foreground bg-muted/30 rounded-lg text-sm">
+            Opportunity Quotations will appear here.
+          </div>
+        </div>
+
         {/* Contacts */}
         <div className="bg-card border rounded-xl p-6 shadow-sm">
           <h3 className="font-semibold mb-4 tracking-tight flex items-center gap-2">
