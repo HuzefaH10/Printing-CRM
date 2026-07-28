@@ -78,6 +78,12 @@ export function OpportunityListTable({ opportunities, isLoading }: OpportunityLi
       columns={columns} 
       isLoading={isLoading} 
       onRowClick={handleRowClick}
+      searchKey="name"
+      searchPlaceholder="Search opportunities..."
+      emptyState={{
+        title: "No opportunities found",
+        description: "You have no active opportunities matching your criteria."
+      }}
     />
   );
 }

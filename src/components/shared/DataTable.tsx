@@ -7,12 +7,12 @@ import {
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel,
-  getSortedRowModel,
   SortingState,
-  getFilteredRowModel,
+  getSortedRowModel,
   ColumnFiltersState,
-  VisibilityState,
+  getFilteredRowModel,
 } from "@tanstack/react-table";
+
 import {
   Table,
   TableBody,
@@ -23,15 +23,13 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search, SlidersHorizontal, ChevronLeft, ChevronRight, FileX } from "lucide-react";
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, FileX } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  isLoading?: boolean;
-  searchKey?: string; // Which column to search on (e.g. "name")
+  searchKey?: string;
   searchPlaceholder?: string;
-  onRowClick?: (row: TData) => void;
   emptyState?: {
     title: string;
     description: string;
@@ -41,16 +39,12 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  isLoading,
   searchKey,
   searchPlaceholder = "Search...",
-  onRowClick,
   emptyState = { title: "No results found", description: "Try adjusting your filters or search query." }
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState({});
 
   const table = useReactTable({
     data,
@@ -61,20 +55,16 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
-    onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     state: {
       sorting,
       columnFilters,
-      columnVisibility,
-      rowSelection,
     },
   });
 
   return (
     <div className="space-y-4">
       {/* Table Toolbar */}
-      <div className="flex items-center justify-between p-1">
+      <div className="flex items-center justify-between">
         {searchKey && (
           <div className="relative w-72">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -84,12 +74,12 @@ export function DataTable<TData, TValue>({
               onChange={(event) =>
                 table.getColumn(searchKey)?.setFilterValue(event.target.value)
               }
-              className="pl-8 bg-background shadow-sm"
+              className="pl-8 bg-background"
             />
           </div>
         )}
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="hidden lg:flex shadow-sm">
+          <Button variant="outline" size="sm" className="hidden lg:flex">
             <SlidersHorizontal className="mr-2 h-4 w-4" />
             View Options
           </Button>
@@ -97,44 +87,32 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table Container */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        <div className="relative w-full overflow-auto max-h-[600px] scrollbar-hide">
+      <div className="rounded-md border bg-card">
+        <div className="relative w-full overflow-auto max-h-[600px]">
           <Table>
-            <TableHeader className="sticky top-0 bg-muted/90 backdrop-blur z-10 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
+            <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur z-10 shadow-sm">
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="hover:bg-transparent border-b-0">
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id} className="whitespace-nowrap font-semibold h-11 text-xs uppercase tracking-wider text-muted-foreground">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    );
-                  })}
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id} className="whitespace-nowrap font-semibold">
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
                 </TableRow>
               ))}
             </TableHeader>
             <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="h-64 text-center">
-                    <div className="flex flex-col justify-center items-center h-full text-muted-foreground">
-                      <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary/50" />
-                      <p className="font-medium text-foreground">Loading data...</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : table.getRowModel().rows?.length ? (
+              {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
-                    onClick={() => onRowClick && onRowClick(row.original)}
-                    className={onRowClick ? "cursor-pointer hover:bg-muted/50 transition-colors" : "hover:bg-muted/50 transition-colors"}
+                    className="hover:bg-muted/50 transition-colors"
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-3">
@@ -161,21 +139,21 @@ export function DataTable<TData, TValue>({
 
       {/* Pagination Footer */}
       {table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between px-2 pt-2">
+        <div className="flex items-center justify-between px-2">
           <div className="text-sm text-muted-foreground">
             Showing{" "}
-            <span className="font-medium text-foreground">
+            <span className="font-medium">
               {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}
             </span>{" "}
             to{" "}
-            <span className="font-medium text-foreground">
+            <span className="font-medium">
               {Math.min(
                 (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
                 table.getFilteredRowModel().rows.length
               )}
             </span>{" "}
             of{" "}
-            <span className="font-medium text-foreground">{table.getFilteredRowModel().rows.length}</span>{" "}
+            <span className="font-medium">{table.getFilteredRowModel().rows.length}</span>{" "}
             entries
           </div>
           <div className="flex items-center space-x-2">
@@ -184,7 +162,6 @@ export function DataTable<TData, TValue>({
               size="sm"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="shadow-sm"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="sr-only">Previous</span>
@@ -194,7 +171,6 @@ export function DataTable<TData, TValue>({
               size="sm"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="shadow-sm"
             >
               <span className="sr-only">Next</span>
               <ChevronRight className="h-4 w-4" />
