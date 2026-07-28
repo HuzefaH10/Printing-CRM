@@ -3,7 +3,7 @@ import { Contact } from "../models/contact";
 
 class ContactRepository extends BaseRepository<Contact> {
   constructor() {
-    super("contacts");
+    super("people");
   }
 }
 

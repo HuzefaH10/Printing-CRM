@@ -1,128 +1,151 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { ProductionJob } from "@/features/production/models/job";
-import { productionRepo } from "@/features/production/services/production.repository";
-import { ProductionJobListTable } from "@/features/production/components/ProductionJobListTable";
-import { Button } from "@/components/ui/button";
-import { Plus, Download, Printer, Factory, Clock, CheckCircle2, AlertTriangle, LayoutList, LayoutGrid } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ProductionKanbanBoard } from "@/features/production/components/ProductionKanbanBoard";
+import { Job } from "@/features/jobs/models/job";
+import { jobRepo } from "@/features/jobs/services/job.repository";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { Loader2, AlertCircle } from "lucide-react";
+import { JobDetailDrawer } from "@/features/jobs/components/JobDetailDrawer";
+import { formatRelativeTime } from "@/utils/date";
 
 export default function ProductionPage() {
-  const [jobs, setJobs] = useState<ProductionJob[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadJobs();
+    const unsubscribe = jobRepo.subscribe(
+      [{ field: "status", operator: "in", value: ["Prepress", "Proofing", "Production", "Finishing", "Delivery", "Invoiced", "Completed"] }],
+      { orderBy: "deliveryDeadline", orderDirection: "asc" },
+      (data) => {
+        setJobs(data);
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error(error);
+        setIsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
-  const loadJobs = async () => {
-    setIsLoading(true);
-    try {
-      const { data } = await productionRepo.list();
-      setJobs(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
+  // Compute RAG and Artwork Missing Flag
+  const getRowStyles = (job: Job) => {
+    const now = new Date();
+    const deadline = new Date(job.deliveryDeadline as string);
+    const diffDays = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // Missing Artwork Trigger
+    if (job.status === "Prepress" && job.artworkStatus === "Pending" && diffDays <= 5) {
+      return { 
+        bg: "bg-red-500/10 hover:bg-red-500/20", 
+        border: "border-red-500/30",
+        flagColor: "bg-red-500",
+        alert: "Missing Artwork!" 
+      };
+    }
+
+    if (job.status === "Completed") {
+      return { bg: "bg-muted/30 opacity-70", border: "", flagColor: "bg-slate-300", alert: null };
+    }
+
+    if (diffDays <= 2) {
+      return { bg: "hover:bg-muted/50", border: "", flagColor: "bg-red-500", alert: null };
+    } else if (diffDays <= 5) {
+      return { bg: "hover:bg-muted/50", border: "", flagColor: "bg-amber-500", alert: null };
+    } else {
+      return { bg: "hover:bg-muted/50", border: "", flagColor: "bg-emerald-500", alert: null };
     }
   };
 
-  const activeJobs = jobs.filter(j => j.status !== "Delivered" && j.status !== "Cancelled" && j.status !== "Completed");
-  const delayedJobs = activeJobs.filter(j => j.status === "Delayed" || (j.dueDate && new Date(j.dueDate).getTime() < new Date().getTime()));
-  const prepressJobs = activeJobs.filter(j => j.status === "Waiting" || j.status === "In Prepress");
-  const productionJobs = activeJobs.filter(j => j.status === "In Printing" || j.status === "In Finishing" || j.status === "In Quality Control");
-  const dispatchJobs = activeJobs.filter(j => j.status === "Ready for Dispatch");
-
   return (
-    <div className="space-y-6 pb-12">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Production & Jobs</h2>
-          <p className="text-muted-foreground">Manage your factory floor, track jobs, and ensure on-time delivery.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" /> Export
-          </Button>
-          <Button size="sm">
-            <Plus className="w-4 h-4 mr-2" /> Create Job
-          </Button>
-        </div>
+    <div className="flex flex-col h-full max-w-[1600px] mx-auto space-y-6">
+      <PageHeader
+        title="Production"
+        description="Track active jobs and monitor delivery deadlines."
+      />
+
+      <div className="flex-1 bg-card rounded-xl border shadow-sm overflow-hidden flex flex-col">
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center min-h-[400px]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary/40" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left whitespace-nowrap">
+              <thead className="text-xs text-muted-foreground bg-muted/50 uppercase border-b">
+                <tr>
+                  <th className="px-6 py-4 font-semibold w-2"></th>
+                  <th className="px-6 py-4 font-semibold">Job Number</th>
+                  <th className="px-6 py-4 font-semibold">Client</th>
+                  <th className="px-6 py-4 font-semibold w-[300px]">Description</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold">Artwork</th>
+                  <th className="px-6 py-4 font-semibold">Deadline</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {jobs.map((job) => {
+                  const style = getRowStyles(job);
+                  return (
+                    <tr 
+                      key={job.id} 
+                      onClick={() => setSelectedJobId(job.id)}
+                      className={`${style.bg} cursor-pointer transition-colors`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className={`w-3 h-3 rounded-full ${style.flagColor}`} />
+                      </td>
+                      <td className="px-6 py-4 font-medium text-foreground">
+                        {job.jobNumber}
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground truncate max-w-[200px]">
+                        {job.organizationId}
+                      </td>
+                      <td className="px-6 py-4 truncate max-w-[300px]">
+                        {job.specifications?.quantity ? `${job.specifications.quantity}x ` : ''} 
+                        {job.specifications?.size || 'Misc Job'}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="bg-background border shadow-sm px-2.5 py-1 rounded-md text-xs font-medium">
+                          {job.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {style.alert ? (
+                          <span className="flex items-center text-red-600 font-semibold gap-1 text-xs bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded-md">
+                            <AlertCircle className="w-3 h-3" />
+                            {style.alert}
+                          </span>
+                        ) : (
+                          <span className={`text-xs ${job.artworkStatus === 'Pending' ? 'text-amber-500' : 'text-emerald-500'}`}>
+                            {job.artworkStatus}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 font-medium">
+                        {formatRelativeTime(job.deliveryDeadline as string)}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            {jobs.length === 0 && (
+              <div className="p-12 text-center text-muted-foreground border-t border-dashed">
+                No active production jobs found.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-card border rounded-lg p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-            <Factory className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold">{activeJobs.length}</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Active Jobs</p>
-          </div>
-        </div>
-
-        <div className="bg-card border rounded-lg p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
-            <Printer className="w-5 h-5 text-purple-600" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold">{prepressJobs.length}</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Prepress</p>
-          </div>
-        </div>
-
-        <div className="bg-card border rounded-lg p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-            <Clock className="w-5 h-5 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold">{productionJobs.length}</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">In Production</p>
-          </div>
-        </div>
-
-        <div className="bg-card border rounded-lg p-4 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 bg-teal-500/10 rounded-lg flex items-center justify-center">
-            <CheckCircle2 className="w-5 h-5 text-teal-600" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold">{dispatchJobs.length}</p>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Dispatch</p>
-          </div>
-        </div>
-
-        <div className="bg-card border rounded-lg p-4 shadow-sm flex items-center gap-4 border-l-4 border-l-red-500">
-          <div className="w-10 h-10 bg-red-500/10 rounded-lg flex items-center justify-center">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-red-600">{delayedJobs.length}</p>
-            <p className="text-xs text-red-600/80 uppercase tracking-wider font-semibold">Delayed</p>
-          </div>
-        </div>
-      </div>
-
-      <Tabs defaultValue="kanban" className="w-full">
-        <div className="flex justify-between items-center mb-4">
-          <TabsList>
-            <TabsTrigger value="kanban" className="flex items-center gap-2"><LayoutGrid className="w-4 h-4" /> Board</TabsTrigger>
-            <TabsTrigger value="list" className="flex items-center gap-2"><LayoutList className="w-4 h-4" /> List</TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="kanban" className="mt-0">
-          <ProductionKanbanBoard jobs={activeJobs} />
-        </TabsContent>
-
-        <TabsContent value="list" className="mt-0">
-          <div className="bg-card rounded-lg border shadow-sm">
-            <ProductionJobListTable jobs={activeJobs} isLoading={isLoading} />
-          </div>
-        </TabsContent>
-      </Tabs>
+      <JobDetailDrawer
+        jobId={selectedJobId}
+        open={!!selectedJobId}
+        onOpenChange={(o) => !o && setSelectedJobId(null)}
+      />
     </div>
   );
 }

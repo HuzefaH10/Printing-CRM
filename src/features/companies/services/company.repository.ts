@@ -3,7 +3,7 @@ import { Company } from "../models/company";
 
 class CompanyRepository extends BaseRepository<Company> {
   constructor() {
-    super("companies");
+    super("organizations");
   }
 
   // Custom repository methods can go here
