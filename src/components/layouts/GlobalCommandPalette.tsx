@@ -31,7 +31,7 @@ export function GlobalCommandPalette() {
     return () => document.removeEventListener("open-command-palette", handleOpen);
   }, []);
 
-  if (profile && !profile.preferences.commandPaletteEnabled) return null;
+  if (profile && profile.preferences && !profile.preferences.commandPaletteEnabled) return null;
 
   const runCommand = (command: () => void) => {
     setOpen(false);

@@ -10,7 +10,7 @@ export function useKeyboardShortcuts() {
 
   useEffect(() => {
     // If keyboard shortcuts are disabled in preferences, don't bind them.
-    if (profile && !profile.preferences.keyboardShortcutsEnabled) return;
+    if (profile && profile.preferences && !profile.preferences.keyboardShortcutsEnabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger shortcuts if user is typing in an input or textarea
