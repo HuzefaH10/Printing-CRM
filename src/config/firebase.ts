@@ -12,11 +12,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase only if it hasn't been initialized yet (avoids Next.js HMR issues)
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+let app: ReturnType<typeof getApp> | undefined;
+let auth: ReturnType<typeof getAuth> | undefined;
+let db: ReturnType<typeof getFirestore> | undefined;
+let storage: ReturnType<typeof getStorage> | undefined;
 
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
+// Initialize Firebase only on the client side to avoid Next.js SSR build errors
+// when environment variables might not be populated during static generation.
+if (typeof window !== "undefined") {
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  storage = getStorage(app);
+}
 
-export { app, auth, db, storage };
+const fireAuth = auth as ReturnType<typeof getAuth>;
+const fireDb = db as ReturnType<typeof getFirestore>;
+const fireStorage = storage as ReturnType<typeof getStorage>;
+
+export { app, fireAuth as auth, fireDb as db, fireStorage as storage };
