@@ -79,30 +79,29 @@ const NAV_GROUPS = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  // For a fully resizable sidebar, you'd use framer-motion and react-use-measure, but we will stick to collapsible groups for now.
 
   return (
-    <aside className="w-[260px] flex-shrink-0 border-r bg-card/50 backdrop-blur-xl h-full flex flex-col transition-all duration-300">
-      {/* Workspace Switcher Placeholder */}
-      <div className="p-4 border-b h-[60px] flex items-center cursor-pointer hover:bg-muted/50 transition-colors">
+    <aside className="w-[260px] flex-shrink-0 border-r border-sidebar-border bg-sidebar h-full flex flex-col">
+      {/* ── Workspace Switcher ── */}
+      <div className="px-4 py-3 border-b border-sidebar-border h-[60px] flex items-center cursor-pointer hover:bg-white/[0.03] transition-colors duration-150">
         <div className="flex items-center gap-3 w-full">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-sm">
+          <div className="w-9 h-9 rounded-xl bg-primary/90 flex items-center justify-center shrink-0 shadow-md shadow-primary/20">
             <span className="text-primary-foreground text-sm font-bold">OS</span>
           </div>
           <div className="flex-1 overflow-hidden">
-            <h1 className="font-semibold text-sm truncate">Acme Print Co.</h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Enterprise</p>
+            <h1 className="font-semibold text-sm text-sidebar-foreground truncate leading-tight">Acme Print Co.</h1>
+            <p className="text-[10px] text-sidebar-foreground/40 uppercase tracking-[0.12em] mt-0.5">Enterprise</p>
           </div>
-          <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+          <ChevronDown className="w-4 h-4 text-sidebar-foreground/30 shrink-0" />
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto py-4 scrollbar-hide">
+      {/* ── Navigation ── */}
+      <div className="flex-1 overflow-y-auto py-5 scrollbar-thin">
         <nav className="space-y-6 px-3">
           {NAV_GROUPS.map((group) => (
             <div key={group.group}>
-              <h4 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+              <h4 className="px-3 text-[10px] font-semibold text-sidebar-foreground/35 uppercase tracking-[0.1em] mb-2">
                 {group.group}
               </h4>
               <div className="space-y-0.5">
@@ -113,15 +112,15 @@ export function Sidebar() {
                       key={item.name}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 group",
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 group",
                         isActive 
-                          ? "bg-primary/10 text-primary shadow-sm" 
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          ? "bg-primary/[0.12] text-primary" 
+                          : "text-sidebar-foreground/60 hover:bg-white/[0.04] hover:text-sidebar-foreground/90"
                       )}
                     >
                       <item.icon className={cn(
-                        "w-4 h-4 transition-colors", 
-                        isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                        "w-[18px] h-[18px] transition-colors duration-150 shrink-0", 
+                        isActive ? "text-primary" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70"
                       )} />
                       {item.name}
                     </Link>
@@ -133,20 +132,20 @@ export function Sidebar() {
         </nav>
       </div>
 
-      {/* Footer / Settings */}
-      <div className="p-4 border-t bg-card/50">
+      {/* ── Footer / Settings ── */}
+      <div className="p-3 border-t border-sidebar-border">
         <Link
           href="/settings"
           className={cn(
-            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 group",
+            "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 group",
             pathname.startsWith("/settings") 
-              ? "bg-primary/10 text-primary shadow-sm" 
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              ? "bg-primary/[0.12] text-primary" 
+              : "text-sidebar-foreground/60 hover:bg-white/[0.04] hover:text-sidebar-foreground/90"
           )}
         >
           <Settings className={cn(
-            "w-4 h-4 transition-colors", 
-            pathname.startsWith("/settings") ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+            "w-[18px] h-[18px] transition-colors duration-150", 
+            pathname.startsWith("/settings") ? "text-primary" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70"
           )} />
           System Settings
         </Link>
