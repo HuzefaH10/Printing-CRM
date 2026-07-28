@@ -2,7 +2,7 @@ import { serverTimestamp, Timestamp } from "firebase/firestore";
 import { BaseRepository } from "@/lib/repository/base.repository";
 import { BaseModel } from "@/types/repository";
 
-export type AuditAction = "CREATED" | "UPDATED" | "DELETED" | "RESTORED" | "ARCHIVED";
+export type AuditAction = "CREATED" | "UPDATED" | "DELETED" | "RESTORED" | "ARCHIVED" | "STAGE_CHANGED" | "ACTIVITY_LOGGED" | "ACTIVITY_COMPLETED" | string;
 
 export interface AuditLog extends BaseModel {
   entityId: string;

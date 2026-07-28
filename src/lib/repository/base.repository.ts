@@ -210,6 +210,38 @@ export class BaseRepository<T extends BaseModel> {
   }
 
   /**
+   * Subscribe to real-time updates for a single document
+   */
+  subscribeToDocument(
+    id: string,
+    onUpdate: (data: T | null) => void,
+    onError?: (error: Error) => void
+  ): () => void {
+    const docRef = this.getDocRef(id);
+    
+    return onSnapshot(
+      docRef,
+      (snapshot) => {
+        if (!snapshot.exists()) {
+          onUpdate(null);
+          return;
+        }
+        
+        const data = snapshot.data() as T;
+        if (data.isDeleted) {
+          onUpdate(null);
+          return;
+        }
+        
+        onUpdate(data);
+      },
+      (error) => {
+        if (onError) onError(error);
+      }
+    );
+  }
+
+  /**
    * Perform batch writes
    */
   async batchWrite(

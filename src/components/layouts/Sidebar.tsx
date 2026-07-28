@@ -24,10 +24,10 @@ import {
 const NAV_ITEMS = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Activities", href: "/activities", icon: CalendarDays },
+  { name: "Opportunities", href: "/opportunities", icon: Target },
   { name: "Companies", href: "/companies", icon: Building2 },
   { name: "Contacts", href: "/contacts", icon: Users },
   { name: "Leads", href: "/leads", icon: UserPlus },
-  { name: "Opportunities", href: "/opportunities", icon: Target },
   { name: "Quotations", href: "/quotations", icon: FileText },
   { name: "Production", href: "/production", icon: Factory },
   { name: "Inventory", href: "/inventory", icon: PackageSearch },
