@@ -97,6 +97,7 @@ export default function ProductionJobPage() {
           <TabsTrigger value="activities">Activities</TabsTrigger>
           <TabsTrigger value="qc">Quality Control</TabsTrigger>
           <TabsTrigger value="delivery">Delivery</TabsTrigger>
+          <TabsTrigger value="materials">Materials</TabsTrigger>
           <TabsTrigger value="attachments">Attachments</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -180,6 +181,16 @@ export default function ProductionJobPage() {
           <Card>
             <CardContent className="p-12 text-center text-muted-foreground py-24">
               <p>Universal Activity Engine Integration placeholder.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="materials">
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground py-24">
+              <p className="font-semibold mb-1">Material Allocation</p>
+              <p className="text-sm">Allocated materials, consumed quantities, waste tracking, and material cost for this job will appear here.</p>
+              <p className="text-xs mt-4 text-muted-foreground">Connects to the Warehouse &amp; Inventory Intelligence Engine.</p>
             </CardContent>
           </Card>
         </TabsContent>

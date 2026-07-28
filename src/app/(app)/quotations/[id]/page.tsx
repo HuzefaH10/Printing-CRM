@@ -88,6 +88,7 @@ export default function QuotationProfilePage() {
           <TabsTrigger value="profitability">Profitability</TabsTrigger>
           <TabsTrigger value="revisions">Revisions</TabsTrigger>
           <TabsTrigger value="production">Production</TabsTrigger>
+          <TabsTrigger value="materials">Materials Costing</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
         </TabsList>
         
@@ -121,6 +122,16 @@ export default function QuotationProfilePage() {
             <CardContent className="p-12 text-center text-muted-foreground py-24">
               <p>Production Engine Integration Placeholder</p>
               <p className="text-xs mt-2">Converted production jobs and their status will appear here.</p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="materials">
+          <Card>
+            <CardContent className="p-12 text-center text-muted-foreground py-24">
+              <p className="font-semibold mb-1">Materials Costing</p>
+              <p className="text-sm">Future quotation costing will estimate material requirements based on inventory data.</p>
+              <p className="text-xs mt-4 text-muted-foreground">Connects to the Warehouse &amp; Inventory Intelligence Engine.</p>
             </CardContent>
           </Card>
         </TabsContent>
