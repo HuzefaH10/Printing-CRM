@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { ProspectService } from "@/services/prospect.service";
 import { Prospect, ProspectStatus, ProspectPriority } from "@/types/prospect";
 import { ImportProspectsButton } from "@/components/prospects/ImportProspectsButton";
+import { CleanupLeadsButton } from "@/components/prospects/CleanupLeadsButton";
 import { 
   Search, Plus, Filter, ArrowRight, Star, Building2, 
   Trash2, Mail, Phone, Globe, MapPin, MoreHorizontal, AlertCircle, BookOpen, CheckCircle2, Info
@@ -223,6 +224,7 @@ export default function ProspectsPage() {
               <MethodologyContent />
             </DialogContent>
           </Dialog>
+          <CleanupLeadsButton onComplete={loadProspects} />
           <ImportProspectsButton onComplete={loadProspects} />
           <Button className="gap-2">
             <Plus className="w-4 h-4" /> New Prospect
@@ -384,6 +386,12 @@ export default function ProspectsPage() {
                           )}
                         </div>
                         {p.website && <div className="text-xs text-muted-foreground mt-0.5">{p.website}</div>}
+                        {!p.website && !p.decisionMakerEmail && !p.decisionMakerPhone && (
+                          <div title="Missing website, email, and phone" className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive bg-destructive/10 px-1.5 py-0.5 rounded mt-1 border border-destructive/20">
+                            <AlertCircle className="w-3 h-3" />
+                            Needs Contact Info
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-muted-foreground">{p.industry || '-'}</td>
                       <td className="px-6 py-4">
