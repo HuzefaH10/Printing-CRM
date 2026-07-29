@@ -36,6 +36,16 @@ export interface Prospect {
   contactVerificationStatus?: string;
   sourceList?: string;
 
+  // Market Intelligence Fields
+  producesPhysicalPrint?: string;
+  outsourcesPrintng?: string;
+  outsourcingStatus?: string;
+  evidenceSource?: string;
+  printingTypesNeeded?: string;
+  printFrequency?: string;
+  tenderProcurementEvidence?: string;
+  estimatedOpportunity?: string;
+
   // Decision Maker
   decisionMakerName?: string;
   decisionMakerRole?: string;

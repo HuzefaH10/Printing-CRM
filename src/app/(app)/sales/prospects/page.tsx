@@ -376,6 +376,12 @@ export default function ProspectsPage() {
                               <CheckCircle2 className="w-3.5 h-3.5" />
                             </div>
                           )}
+                          {p.outsourcingStatus === 'Confirmed' && (
+                            <div title="Confirmed Print Outsourcer" className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                              <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                              Top Lead
+                            </div>
+                          )}
                         </div>
                         {p.website && <div className="text-xs text-muted-foreground mt-0.5">{p.website}</div>}
                       </td>
@@ -468,34 +474,89 @@ export default function ProspectsPage() {
                                   </p>
                                   <p className="text-xs text-muted-foreground">{p.contactVerificationStatus || 'Unverified'}</p>
                                 </div>
+                                {p.sourceList && (
+                                  <div className="mt-2 flex items-start gap-2 text-xs text-muted-foreground bg-muted p-2 rounded-md">
+                                    <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                                    <div>
+                                      <span className="font-medium text-foreground">Source:</span> {p.sourceList}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
                             
                             <div>
                               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Printing Requirements</h4>
-                              <p className="text-sm text-foreground leading-relaxed">
-                                {p.likelyPrintingRequirements || 'No specific requirements documented yet.'}
-                              </p>
-                              {p.tenderParticipant && (
-                                <Badge variant="outline" className="mt-2 border-amber-200 text-amber-700 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800 dark:text-amber-400">
-                                  Public Tenders Participant
-                                </Badge>
-                              )}
+                              <div className="space-y-3 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground block text-xs">General Needs</span>
+                                  <p className="text-foreground leading-relaxed">{p.likelyPrintingRequirements || 'No general needs documented.'}</p>
+                                </div>
+                                {p.printingTypesNeeded && (
+                                  <div>
+                                    <span className="text-muted-foreground block text-xs">Specific Types</span>
+                                    <p className="text-foreground leading-relaxed">{p.printingTypesNeeded}</p>
+                                  </div>
+                                )}
+                                {p.printFrequency && (
+                                  <div>
+                                    <span className="text-muted-foreground block text-xs">Frequency</span>
+                                    <p className="text-foreground leading-relaxed">{p.printFrequency}</p>
+                                  </div>
+                                )}
+                                <div className="flex flex-wrap gap-2 pt-1">
+                                  {p.producesPhysicalPrint && (
+                                    <Badge variant="outline" className="bg-muted text-muted-foreground font-normal">Produces Print: {p.producesPhysicalPrint}</Badge>
+                                  )}
+                                  {p.outsourcesPrintng && (
+                                    <Badge variant="outline" className="bg-muted text-muted-foreground font-normal">Outsources: {p.outsourcesPrintng}</Badge>
+                                  )}
+                                  {p.outsourcingStatus && (
+                                    <Badge variant="outline" className={p.outsourcingStatus === 'Confirmed' ? 'border-amber-200 text-amber-700 bg-amber-50 dark:bg-amber-900/10 dark:text-amber-400' : 'bg-muted text-muted-foreground font-normal'}>Status: {p.outsourcingStatus}</Badge>
+                                  )}
+                                </div>
+                                {p.tenderParticipant && (
+                                  <Badge variant="outline" className="mt-2 border-indigo-200 text-indigo-700 bg-indigo-50 dark:bg-indigo-900/10 dark:border-indigo-800 dark:text-indigo-400">
+                                    Public Tenders Participant
+                                  </Badge>
+                                )}
+                                {p.tenderProcurementEvidence && (
+                                  <div>
+                                    <span className="text-muted-foreground block text-xs">Tender Evidence</span>
+                                    <p className="text-foreground leading-relaxed italic text-xs">{p.tenderProcurementEvidence}</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
 
                             <div>
-                              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Context / Description</h4>
-                              <p className="text-sm text-foreground leading-relaxed">
-                                {p.description || 'No additional context.'}
-                              </p>
-                              {p.sourceList && (
-                                <div className="mt-4 flex items-start gap-2 text-xs text-muted-foreground bg-muted p-2 rounded-md">
-                                  <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Context & Intelligence</h4>
+                              <div className="space-y-4">
+                                {p.description && (
                                   <div>
-                                    <span className="font-medium text-foreground">Source:</span> {p.sourceList}
+                                    <span className="text-muted-foreground block text-xs mb-1">Description</span>
+                                    <p className="text-sm text-foreground leading-relaxed">
+                                      {p.description}
+                                    </p>
                                   </div>
-                                </div>
-                              )}
+                                )}
+                                {p.evidenceSource && (
+                                  <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/50 p-2.5 rounded-md">
+                                    <span className="text-blue-700 dark:text-blue-400 block text-xs font-medium mb-1 flex items-center gap-1.5"><Search className="w-3 h-3" /> Evidence / Source</span>
+                                    <p className="text-xs text-blue-900/80 dark:text-blue-200/80 leading-relaxed">
+                                      {p.evidenceSource}
+                                    </p>
+                                  </div>
+                                )}
+                                {p.estimatedOpportunity && (
+                                  <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/50 p-2.5 rounded-md">
+                                    <span className="text-emerald-700 dark:text-emerald-400 block text-xs font-medium mb-1 flex items-center gap-1.5"><Star className="w-3 h-3" /> Estimated Opportunity</span>
+                                    <p className="text-xs text-emerald-900/80 dark:text-emerald-200/80 leading-relaxed">
+                                      {p.estimatedOpportunity}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
