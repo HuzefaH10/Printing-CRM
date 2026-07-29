@@ -33,6 +33,8 @@ export interface Prospect {
   rating: ProspectRating;
   status: ProspectStatus;
   source: string;
+  contactVerificationStatus?: string;
+  sourceList?: string;
 
   // Decision Maker
   decisionMakerName?: string;
