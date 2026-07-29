@@ -33,13 +33,7 @@ export function ConvertProspectModal({ prospect, isOpen, onClose, onSuccess }: C
     try {
       if (!prospect.id) throw new Error("Missing Prospect ID");
       
-      const newCompanyId = await ProspectService.convertToCompany(prospect.id, {
-        name: companyName,
-        industry: prospect.industry,
-        website: prospect.website,
-        billingAddress: prospect.location,
-        type: 'Prospect Converted',
-      });
+      const newCompanyId = await ProspectService.convertToCompany(prospect.id);
       
       onSuccess();
       // Optionally redirect to the new company page

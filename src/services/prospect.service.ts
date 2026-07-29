@@ -78,9 +78,9 @@ export class ProspectService {
    * Convert a prospect to a company
    * This runs as a transaction to ensure both operations (create company, update prospect) succeed or fail together.
    */
-  static async convertToCompany(prospectId: string, companyData: any): Promise<string> {
+  static async convertToCompany(prospectId: string): Promise<string> {
     const prospectRef = doc(db, COLLECTION_NAME, prospectId);
-    const companyRef = doc(collection(db, 'companies')); // Auto-generate ID for new company
+    const companyRef = doc(collection(db, 'companies'));
 
     try {
       await runTransaction(db, async (transaction) => {
@@ -89,15 +89,62 @@ export class ProspectService {
           throw new Error("Prospect does not exist!");
         }
 
-        // 1. Create the company record
+        const pData = prospectDoc.data() as Prospect;
         const now = new Date().toISOString();
+
+        // 1. Create the company record mapping from Prospect
         const newCompany = {
-          ...companyData,
-          isCustomer: false, // Or true, depending on the business logic, but it's a new company in the CRM.
-          sourceProspectId: prospectId,
+          name: pData.organizationName || 'Unknown Company',
+          legalName: pData.organizationName || 'Unknown Company',
+          industry: pData.industry || 'Other',
+          category: 'Uncategorized',
+          description: pData.description || '',
+          website: pData.website || '',
+          phone: pData.decisionMakerPhone || '',
+          email: pData.decisionMakerEmail || '',
+          
+          location: {
+            address: pData.location || '',
+            city: '',
+            state: '',
+            country: '',
+            postalCode: '',
+            area: ''
+          },
+          
+          intelligence: {
+            relationshipScore: pData.relationshipScore || 0,
+            potentialScore: 0,
+            opportunityScore: 0,
+            urgencyScore: 0,
+            engagementScore: 0,
+            overallScore: 0
+          },
+          
+          relationshipTracker: {
+            responseTimeDays: 0,
+            averageFollowUpDays: 0,
+            communicationFrequency: 'Ad-hoc',
+            health: 'FAIR'
+          },
+
+          isCustomer: false,
+          isSupplier: false,
+          isPartner: false,
+          
+          currency: 'KWD',
+          language: 'EN',
+          priority: pData.priority === 'Critical' ? 'URGENT' : (pData.priority?.toUpperCase() || 'MEDIUM'),
+          status: 'PROSPECT',
+          
+          tags: pData.tags || [],
+          source: pData.source || 'Prospect Conversion',
+          customFields: pData.customFields || {},
+          
           createdAt: now,
           updatedAt: now,
         };
+        
         transaction.set(companyRef, newCompany);
 
         // 2. Update the prospect record
