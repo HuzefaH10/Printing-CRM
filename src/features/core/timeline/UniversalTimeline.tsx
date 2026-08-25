@@ -4,7 +4,7 @@ import React from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-export type TimelineItemType = "AUDIT" | "NOTE" | "COMMENT" | "ATTACHMENT";
+export type TimelineItemType = "AUDIT" | "NOTE" | "COMMENT" | "ATTACHMENT" | "OUTREACH" | "EMAIL";
 
 export interface TimelineItem {
   id: string;
@@ -72,13 +72,24 @@ export function UniversalTimeline({ items, isLoading }: UniversalTimelineProps) 
               </span>
             </div>
             
-            <div className="text-sm text-foreground/90 font-medium mb-1">
-              {item.title}
+            <div className="text-sm text-foreground/90 font-medium mb-1 flex items-center justify-between gap-2">
+              <span>{item.title}</span>
+              {(item.type === "OUTREACH" || item.type === "EMAIL") && (
+                <span className="px-2 py-0.5 text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20 rounded-full whitespace-nowrap">
+                  Outreach Email Sent
+                </span>
+              )}
             </div>
             
             {item.description && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
                 {item.description}
+              </div>
+            )}
+            
+            {item.metadata?.recipients && (
+              <div className="mt-2 text-xs bg-muted/30 p-2 rounded border border-border/50 text-muted-foreground">
+                <span className="font-semibold text-foreground">Recipient:</span> {item.metadata.recipients.join(", ")}
               </div>
             )}
             

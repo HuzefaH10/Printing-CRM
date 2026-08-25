@@ -27,20 +27,22 @@ export default function CompanyTimelinePage() {
         
         const mappedAuditItems: TimelineItem[] = auditRes.data.map(log => ({
           id: log.id,
-          type: "AUDIT",
-          title: `Action: ${log.action}`,
-          description: log.reason || undefined,
-          timestamp: (log.createdAt as any)?.toDate ? (log.createdAt as any).toDate() : new Date(log.createdAt as any),
-          user: log.userId ? { id: log.userId, name: "System User" } : undefined
+          type: log.action === "outreach_email_sent" ? "OUTREACH" : "AUDIT",
+          title: log.action === "outreach_email_sent" ? "Partnership Outreach Sent" : `Action: ${log.action}`,
+          description: log.reason || (log.newValue as any)?.recipientEmail ? `Recipient: ${(log.newValue as any).recipientEmail}` : undefined,
+          timestamp: (log.createdAt as any)?.toDate ? (log.createdAt as any).toDate() : new Date(log.createdAt as any || Date.now()),
+          user: log.userId ? { id: log.userId, name: "Sales Team" } : undefined,
+          metadata: log.newValue
         }));
 
         const mappedActivities: TimelineItem[] = activitiesRes.data.map(activity => ({
           id: activity.id,
-          type: "COMMENT", // Fallback type for now or we could add 'ACTIVITY' to TimelineItemType
-          title: `${activity.type}: ${activity.title}`,
+          type: activity.type === "EMAIL" ? "OUTREACH" : "COMMENT",
+          title: activity.title,
           description: activity.shortDescription || activity.detailedNotes,
-          timestamp: (activity.createdAt as any)?.toDate ? (activity.createdAt as any).toDate() : new Date(activity.createdAt as any),
-          user: activity.createdBy ? { id: activity.createdBy, name: "User" } : undefined
+          timestamp: (activity.createdAt as any)?.toDate ? (activity.createdAt as any).toDate() : new Date(activity.createdAt as any || Date.now()),
+          user: activity.createdBy ? { id: activity.createdBy, name: "Sales Team" } : undefined,
+          metadata: activity.payload
         }));
         
         const merged = [...mappedAuditItems, ...mappedActivities].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());

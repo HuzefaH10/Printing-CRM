@@ -158,6 +158,7 @@ export interface Company extends BaseModel {
   registrationNumber?: string;
   
   customerSince?: Date | string | null;
+  lastOutreachSentAt?: Date | string | null;
   source?: string;
   leadSource?: string;
   priority: PriorityLevel;

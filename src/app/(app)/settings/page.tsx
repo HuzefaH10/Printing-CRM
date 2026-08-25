@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { ProfileSettings } from "@/features/settings/ProfileSettings";
 import { AppearanceSettings } from "@/features/settings/AppearanceSettings";
+import { OutreachSettings } from "@/features/settings/OutreachSettings";
+import { SecuritySettings } from "@/features/settings/SecuritySettings";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
 
   const tabs = [
     { id: "profile", label: "Profile" },
+    { id: "outreach", label: "Outreach Settings" },
     { id: "appearance", label: "Appearance" },
-    { id: "preferences", label: "Preferences" },
     { id: "security", label: "Security" },
+    { id: "preferences", label: "Preferences" },
     { id: "notifications", label: "Notifications" },
     { id: "system", label: "System" },
   ];
@@ -46,10 +49,12 @@ export default function SettingsPage() {
 
         <div className="flex-1">
           {activeTab === "profile" && <ProfileSettings />}
+          {activeTab === "outreach" && <OutreachSettings />}
           {activeTab === "appearance" && <AppearanceSettings />}
+          {activeTab === "security" && <SecuritySettings />}
           
           {/* Placeholders for other tabs */}
-          {["preferences", "security", "notifications", "system"].includes(activeTab) && (
+          {["preferences", "notifications", "system"].includes(activeTab) && (
             <div className="space-y-6 max-w-2xl">
               <div>
                 <h3 className="text-lg font-medium capitalize">{activeTab}</h3>
