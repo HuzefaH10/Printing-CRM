@@ -5,6 +5,7 @@ import { ProfileSettings } from "@/features/settings/ProfileSettings";
 import { AppearanceSettings } from "@/features/settings/AppearanceSettings";
 import { OutreachSettings } from "@/features/settings/OutreachSettings";
 import { SecuritySettings } from "@/features/settings/SecuritySettings";
+import { EmailTemplatesSettings } from "@/features/settings/EmailTemplatesSettings";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
@@ -12,6 +13,7 @@ export default function SettingsPage() {
   const tabs = [
     { id: "profile", label: "Profile" },
     { id: "outreach", label: "Outreach Settings" },
+    { id: "email-templates", label: "Email Templates" },
     { id: "appearance", label: "Appearance" },
     { id: "security", label: "Security" },
     { id: "preferences", label: "Preferences" },
@@ -50,6 +52,7 @@ export default function SettingsPage() {
         <div className="flex-1">
           {activeTab === "profile" && <ProfileSettings />}
           {activeTab === "outreach" && <OutreachSettings />}
+          {activeTab === "email-templates" && <EmailTemplatesSettings />}
           {activeTab === "appearance" && <AppearanceSettings />}
           {activeTab === "security" && <SecuritySettings />}
           
