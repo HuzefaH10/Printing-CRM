@@ -19,6 +19,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MethodologyContent } from "./MethodologyContent";
+import { exportToExcel } from "@/features/companies/utils/excel.utils";
+import { Download } from "lucide-react";
 
 type SortField = 'organizationName' | 'industry' | 'status' | 'priority' | 'rating';
 type SortOrder = 'asc' | 'desc';
@@ -225,6 +227,9 @@ export default function ProspectsPage() {
             </DialogContent>
           </Dialog>
           <CleanupLeadsButton onComplete={loadProspects} />
+          <Button variant="outline" className="gap-2" onClick={() => exportToExcel(prospects)}>
+            <Download className="w-4 h-4" /> Export
+          </Button>
           <ImportProspectsButton onComplete={loadProspects} />
           <Button className="gap-2">
             <Plus className="w-4 h-4" /> New Prospect

@@ -1,212 +1,236 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, DatabaseZap, AlertTriangle } from "lucide-react";
-import * as xlsx from "xlsx";
-import { ProspectService } from "@/services/prospect.service";
-import { AuditService } from "@/services/audit.service";
-import { Prospect } from "@/types/prospect";
+import { Loader2, DatabaseZap, Upload, FileDown, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-
-function normalizeName(name: string) {
-  if (!name) return '';
-  return name.toLowerCase().trim().replace(/company|co\.|holding|llc|& distribution|ltd/g, '').replace(/[^a-z0-9]/g, '');
-}
-
-type Conflict = {
-  existingProspect: Prospect;
-  newData: Partial<Prospect>;
-  reason: string;
-};
+import { ImportService } from "@/features/companies/services/import.service";
+import { parseExcel, generateTemplate } from "@/features/companies/utils/excel.utils";
+import { ImportPreviewRow } from "@/features/companies/models/import";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 export function ImportProspectsButton({ onComplete }: { onComplete: () => void }) {
-  const [isImporting, setIsImporting] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1); // 1: Upload, 2: Preview
   
-  // Conflict Resolution State
-  const [conflicts, setConflicts] = useState<Conflict[]>([]);
-  const [currentConflictIndex, setCurrentConflictIndex] = useState(0);
-  const [resolvedToKeep, setResolvedToKeep] = useState<Partial<Prospect>[]>([]);
+  const [previewRows, setPreviewRows] = useState<ImportPreviewRow[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImport = async () => {
-    setIsImporting(true);
+  const handleOpen = () => {
+    setIsOpen(true);
+    setStep(1);
+    setPreviewRows([]);
+  };
+
+  const handleClose = () => {
+    if (!isProcessing) setIsOpen(false);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessing(true);
     try {
-      const existing = await ProspectService.getAllProspects();
-      const existingMap = new Map<string, Prospect>();
-      existing.forEach(p => {
-        if (p.organizationName) existingMap.set(normalizeName(p.organizationName), p);
-      });
-
-      const toInsert: Partial<Prospect>[] = [];
-      const toDelete: string[] = [];
-      const foundConflicts: Conflict[] = [];
-
-      // 1. Process Master DB (if we wanted to run it again, but usually we just want to run Market Intel now)
-      // Since the user wants to ingest Market Intel, we will fetch and parse Market Intel.
-      const res = await fetch('/temp-import/Kuwait_Market_Intelligence.xlsx');
-      if (!res.ok) throw new Error("Could not fetch Market Intelligence file.");
+      const { rawRows, errors } = await parseExcel(file);
       
-      const ab = await res.arrayBuffer();
-      const wb = xlsx.read(ab, { type: 'array' });
-      const sheet = wb.Sheets['Market Intelligence'] || wb.Sheets[wb.SheetNames[0]];
-      const data: any[][] = xlsx.utils.sheet_to_json(sheet, { header: 1 });
-      
-      // Note: Market Intel doesn't have a header row in the provided format, row 0 is Aafaq.
-      data.forEach(row => {
-        if (!row[0] || typeof row[0] !== 'string') return;
-        const orgName = row[0].trim();
-        const normName = normalizeName(orgName);
-
-        const newData: Partial<Prospect> = {
-          organizationName: orgName,
-          industry: row[1] ? String(row[1]).trim() : '',
-          producesPhysicalPrint: row[2] ? String(row[2]).trim() : '',
-          outsourcesPrintng: row[3] ? String(row[3]).trim() : '',
-          outsourcingStatus: row[4] ? String(row[4]).trim() : '',
-          evidenceSource: row[5] ? String(row[5]).trim() : '',
-          printingTypesNeeded: row[6] ? String(row[6]).trim() : '',
-          printFrequency: row[7] ? String(row[7]).trim() : '',
-          tenderProcurementEvidence: row[8] ? String(row[8]).trim() : '',
-          contactVerificationStatus: row[9] ? String(row[9]).trim() : '',
-          location: row[10] ? String(row[10]).trim() : '',
-          website: row[11] ? String(row[11]).trim() : '',
-          estimatedOpportunity: row[12] ? String(row[12]).trim() : '',
-          priority: normName.includes('aafaq') ? 'Critical' : 'High',
-          rating: normName.includes('aafaq') ? '*****' : '***',
-          status: 'New',
-          source: 'Market Intelligence',
-        };
-
-        const existingRecord = existingMap.get(normName);
-
-        if (existingRecord) {
-          // Check if "dirty"
-          const isDirty = existingRecord.status === 'Converted' || (existingRecord as any).activityCount > 0;
-          if (isDirty) {
-            foundConflicts.push({
-              existingProspect: existingRecord,
-              newData,
-              reason: `This record is marked as ${existingRecord.status} and may have logged activities.`,
-            });
-          } else {
-            // Clean match -> Delete old, Insert new
-            toDelete.push(existingRecord.id!);
-            toInsert.push(newData);
-            
-            // Log Deduplication in background (we don't await this inside the loop to avoid blocking)
-            AuditService.logEvent({
-              entityId: existingRecord.id!,
-              entityType: 'Prospect',
-              action: 'DEDUPLICATED_REPLACED',
-              userId: 'SYSTEM_IMPORT',
-              oldValue: existingRecord,
-              newValue: newData,
-              reason: `Fuzzy match found on import for ${orgName}`,
-            }).catch(console.error);
-          }
-        } else {
-          // No match, just insert
-          toInsert.push(newData);
-        }
-      });
-
-      // Execute clean replacements immediately
-      for (const id of toDelete) {
-        await ProspectService.deleteProspect(id);
-      }
-      for (const p of toInsert) {
-        await ProspectService.createProspect({ ...p, status: p.status || 'New' } as any);
+      if (errors.length > 0) {
+        alert("Errors found during initial parsing:\n" + errors.join("\n"));
+        // Still proceed with valid rows
       }
 
-      if (foundConflicts.length > 0) {
-        setConflicts(foundConflicts);
-        setCurrentConflictIndex(0);
-        setResolvedToKeep([]);
+      if (rawRows.length > 0) {
+        const analyzed = await ImportService.analyzeImportBatch(rawRows);
+        setPreviewRows(analyzed);
+        setStep(2);
       } else {
-        alert(`Successfully imported ${toInsert.length} records. (${toDelete.length} deduplicated)`);
-        onComplete();
-        setIsImporting(false);
+        alert("No valid data rows found in the file.");
       }
-      
     } catch (err: any) {
       console.error(err);
-      alert("Error importing: " + err.message);
-      setIsImporting(false);
+      alert("Failed to parse file: " + err.message);
+    } finally {
+      setIsProcessing(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
-  const handleResolveConflict = async (action: 'replace' | 'skip' | 'keep_both') => {
-    const conflict = conflicts[currentConflictIndex];
-    
-    if (action === 'replace') {
-      await ProspectService.deleteProspect(conflict.existingProspect.id!);
-      await ProspectService.createProspect({ ...conflict.newData, status: conflict.newData.status || 'New' } as any);
-      
-      AuditService.logEvent({
-        entityId: conflict.existingProspect.id!,
-        entityType: 'Prospect',
-        action: 'DEDUPLICATED_REPLACED_MANUAL',
-        userId: 'USER', // We don't have actual user context here
-        oldValue: conflict.existingProspect,
-        newValue: conflict.newData,
-        reason: 'User explicitly chose to replace dirty record during import conflict',
-      }).catch(console.error);
-    } else if (action === 'keep_both') {
-      await ProspectService.createProspect({ ...conflict.newData, status: conflict.newData.status || 'New' } as any);
-    } // If 'skip', we do nothing
-    
-    const nextIndex = currentConflictIndex + 1;
-    if (nextIndex < conflicts.length) {
-      setCurrentConflictIndex(nextIndex);
-    } else {
-      // All resolved
-      alert("All conflicts resolved and import finished.");
-      setConflicts([]);
-      setIsImporting(false);
+  const handleToggleRowSelection = (rowId: number) => {
+    setPreviewRows(prev => prev.map(r => 
+      r.rowId === rowId ? { ...r, selected: !r.selected } : r
+    ));
+  };
+
+  const handleConfirmImport = async () => {
+    setIsProcessing(true);
+    try {
+      // Use a hardcoded "SYSTEM" or currently logged in user ID if available
+      await ImportService.commitImportBatch(previewRows, "SYSTEM");
+      alert("Import completed successfully!");
+      setIsOpen(false);
       onComplete();
+    } catch (err: any) {
+      console.error(err);
+      alert("Failed to commit import: " + err.message);
+    } finally {
+      setIsProcessing(false);
     }
   };
+
+  const selectedCount = previewRows.filter(r => r.selected).length;
+  const newCount = previewRows.filter(r => r.status === "new" && r.selected).length;
+  const updateCount = previewRows.filter(r => r.status === "update" && r.selected).length;
+  const warningCount = previewRows.filter(r => r.status === "duplicate_warning").length;
+  const errorCount = previewRows.filter(r => r.status === "error").length;
 
   return (
     <>
-      <Button onClick={handleImport} disabled={isImporting || conflicts.length > 0} className="gap-2" variant="default">
-        {isImporting && conflicts.length === 0 ? <Loader2 className="w-4 h-4 animate-spin" /> : <DatabaseZap className="w-4 h-4" />}
-        {isImporting && conflicts.length === 0 ? "Importing..." : "Import Market Intel"}
+      <Button onClick={handleOpen} className="gap-2" variant="default">
+        <DatabaseZap className="w-4 h-4" />
+        Import Prospects
       </Button>
 
-      <Dialog open={conflicts.length > 0} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-[500px]">
+      <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-amber-600">
-              <AlertTriangle className="w-5 h-5" /> Import Conflict ({currentConflictIndex + 1} of {conflicts.length})
-            </DialogTitle>
+            <DialogTitle>Import Prospects</DialogTitle>
             <DialogDescription>
-              We found a match for a record being imported, but the existing record has active work or status changes.
+              {step === 1 
+                ? "Upload an Excel file to import prospects into the CRM."
+                : "Review the data before importing. Uncheck any rows you want to skip."
+              }
             </DialogDescription>
           </DialogHeader>
-          
-          {conflicts[currentConflictIndex] && (
-            <div className="space-y-4 py-4">
-              <div className="bg-muted p-3 rounded-md">
-                <p className="font-semibold text-foreground">{conflicts[currentConflictIndex].existingProspect.organizationName}</p>
-                <p className="text-sm text-amber-600 mt-1">{conflicts[currentConflictIndex].reason}</p>
+
+          {step === 1 && (
+            <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-border rounded-lg bg-muted/20 space-y-4">
+              <Upload className="w-12 h-12 text-muted-foreground" />
+              <div className="text-center">
+                <p className="text-lg font-medium text-foreground">Upload your Excel file</p>
+                <p className="text-sm text-muted-foreground mt-1">Make sure you use the standard template.</p>
               </div>
-              <p className="text-sm text-muted-foreground">How would you like to handle this?</p>
+              <div className="flex items-center gap-4 mt-4">
+                <Button variant="outline" onClick={() => generateTemplate()} className="gap-2">
+                  <FileDown className="w-4 h-4" /> Download Template
+                </Button>
+                <Button onClick={() => fileInputRef.current?.click()} disabled={isProcessing}>
+                  {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  Select .xlsx File
+                </Button>
+                <input 
+                  type="file" 
+                  accept=".xlsx" 
+                  className="hidden" 
+                  ref={fileInputRef} 
+                  onChange={handleFileChange}
+                />
+              </div>
             </div>
           )}
 
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:justify-between">
-            <Button variant="outline" onClick={() => handleResolveConflict('skip')} className="w-full sm:w-auto">
-              Skip Import
-            </Button>
-            <div className="flex gap-2 w-full sm:w-auto">
-              <Button variant="secondary" onClick={() => handleResolveConflict('keep_both')} className="w-full sm:w-auto">
-                Keep Both
-              </Button>
-              <Button variant="destructive" onClick={() => handleResolveConflict('replace')} className="w-full sm:w-auto">
-                Replace (Lose Work)
-              </Button>
+          {step === 2 && (
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex gap-4 mb-4">
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                  {newCount} New
+                </Badge>
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                  {updateCount} Updates
+                </Badge>
+                {warningCount > 0 && (
+                  <Badge variant="outline" className="bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    {warningCount} Warnings
+                  </Badge>
+                )}
+                {errorCount > 0 && (
+                  <Badge variant="outline" className="bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                    {errorCount} Errors
+                  </Badge>
+                )}
+              </div>
+
+              <ScrollArea className="flex-1 border rounded-md">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-xs uppercase bg-muted sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-3 w-10">Inc</th>
+                      <th className="px-4 py-3 w-20">Row</th>
+                      <th className="px-4 py-3 w-28">Status</th>
+                      <th className="px-4 py-3">Company Name</th>
+                      <th className="px-4 py-3">Details / Diffs</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {previewRows.map((row) => (
+                      <tr key={row.rowId} className={!row.selected ? "opacity-50 bg-muted/50" : ""}>
+                        <td className="px-4 py-3">
+                          <Checkbox 
+                            checked={row.selected}
+                            disabled={row.status === "error"}
+                            onCheckedChange={() => handleToggleRowSelection(row.rowId)}
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{row.rowId}</td>
+                        <td className="px-4 py-3">
+                          {row.status === "new" && <Badge className="bg-emerald-500 hover:bg-emerald-600">New</Badge>}
+                          {row.status === "update" && <Badge className="bg-blue-500 hover:bg-blue-600">Update</Badge>}
+                          {row.status === "duplicate_warning" && <Badge variant="outline" className="text-amber-500 border-amber-500">Warning</Badge>}
+                          {row.status === "error" && <Badge variant="destructive">Error</Badge>}
+                        </td>
+                        <td className="px-4 py-3 font-medium">
+                          {row.data["Company Name"]}
+                        </td>
+                        <td className="px-4 py-3">
+                          {row.status === "error" && (
+                            <div className="text-red-500 flex items-start gap-1">
+                              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                              <span>{row.errors?.join(", ")}</span>
+                            </div>
+                          )}
+                          {row.status === "duplicate_warning" && (
+                            <div className="text-amber-600 flex items-start gap-1 mb-2">
+                              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                              <span>{row.errors?.join(", ")}</span>
+                            </div>
+                          )}
+                          {(row.status === "update" || row.status === "duplicate_warning") && row.diffs && row.diffs.length > 0 && (
+                            <div className="space-y-1 mt-1">
+                              {row.diffs.map((diff, i) => (
+                                <div key={i} className="flex items-center text-xs gap-2">
+                                  <span className="font-medium text-muted-foreground min-w-[120px]">{diff.field}:</span>
+                                  <span className="text-red-500 line-through max-w-[150px] truncate">{diff.oldValue || "(empty)"}</span>
+                                  <ArrowRight className="w-3 h-3 text-muted-foreground mx-1" />
+                                  <span className="text-emerald-500 font-medium max-w-[150px] truncate">{diff.newValue || "(empty)"}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {row.status === "new" && (
+                            <div className="text-xs text-muted-foreground">
+                              {row.data["Unique Reference ID"] ? `ID: ${row.data["Unique Reference ID"]}` : "Will auto-generate ID"}
+                              {row.data["Decision Maker Name"] ? ` • Contact: ${row.data["Decision Maker Name"]}` : ""}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </ScrollArea>
             </div>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={handleClose} disabled={isProcessing}>Cancel</Button>
+            {step === 2 && (
+              <Button onClick={handleConfirmImport} disabled={isProcessing || selectedCount === 0}>
+                {isProcessing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                Confirm Import ({selectedCount} rows)
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
