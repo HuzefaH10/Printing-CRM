@@ -5,6 +5,7 @@ import { AuditService } from "@/services/audit.service";
 import { OutreachSettingsService } from "@/features/settings/services/outreach-settings.service";
 import { EmailService } from "@/services/email.service";
 import { Role } from "@/types/user";
+import { OutreachUtils } from "../utils/outreach.utils";
 
 export const outreachRequestSchema = z.object({
   companyId: z.string().min(1, "Company ID is required"),
@@ -17,36 +18,6 @@ export type OutreachRequestInput = z.infer<typeof outreachRequestSchema>;
 
 export class OutreachService {
   /**
-   * Helper to check if role has Sales / CRM write access
-   */
-  static hasSalesPermission(role?: Role | null): boolean {
-    if (!role) return false;
-    return ["Owner", "Admin", "Sales"].includes(role);
-  }
-
-  /**
-   * Check if 5-minute rate limit is active for a company
-   */
-  static isRateLimited(lastOutreachSentAt?: Date | string | null): { isLimited: boolean; minutesRemaining: number; elapsedMs: number } {
-    if (!lastOutreachSentAt) return { isLimited: false, minutesRemaining: 0, elapsedMs: Infinity };
-
-    const lastSentTime = new Date(lastOutreachSentAt).getTime();
-    if (isNaN(lastSentTime)) return { isLimited: false, minutesRemaining: 0, elapsedMs: Infinity };
-
-    const now = Date.now();
-    const elapsedMs = now - lastSentTime;
-    const FIVE_MINUTES_MS = 5 * 60 * 1000;
-
-    if (elapsedMs < FIVE_MINUTES_MS) {
-      const remainingMs = FIVE_MINUTES_MS - elapsedMs;
-      const minutesRemaining = Math.ceil(remainingMs / (60 * 1000));
-      return { isLimited: true, minutesRemaining, elapsedMs };
-    }
-
-    return { isLimited: false, minutesRemaining: 0, elapsedMs };
-  }
-
-  /**
    * Send partnership email, log activity on success, reject and don't log on failure.
    */
   static async sendPartnershipEmail(
@@ -54,7 +25,7 @@ export class OutreachService {
     user: { uid: string; email?: string | null; role?: Role | null }
   ) {
     // 1. Permission check
-    if (!this.hasSalesPermission(user.role)) {
+    if (!OutreachUtils.hasSalesPermission(user.role)) {
       throw new Error("Unauthorized: Only users with Sales, Admin, or Owner roles can send partnership outreach.");
     }
 
@@ -68,7 +39,7 @@ export class OutreachService {
     }
 
     // 4. Rate Limiting Check (5 minutes per company)
-    const rateLimit = this.isRateLimited(company.lastOutreachSentAt);
+    const rateLimit = OutreachUtils.isRateLimited(company.lastOutreachSentAt);
     if (rateLimit.isLimited) {
       throw new Error(`Rate limit active: An outreach email was recently sent to ${company.name}. Please wait ${rateLimit.minutesRemaining} minute(s) before sending another.`);
     }

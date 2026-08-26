@@ -5,6 +5,8 @@ import { Contact } from "../models/contact";
 import { DataTable } from "@/components/ui/data-table/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
+import { contactRepo } from "../services/contact.repository";
+import { useBiometricGate } from "@/features/auth/hooks/useBiometricGate";
 import { Badge } from "@/components/ui/badge";
 import { Building2, Phone, Mail, MapPin, MoreHorizontal, Edit, Trash2, Archive, Star } from "lucide-react";
 import { 
@@ -24,6 +26,20 @@ interface ContactListTableProps {
 
 export function ContactListTable({ contacts, isLoading }: ContactListTableProps) {
   const router = useRouter();
+  const { withBiometricGate } = useBiometricGate();
+
+  const performDelete = async (contactId: string) => {
+    try {
+      await contactRepo.hardDelete(contactId);
+      window.location.reload(); // Simple refresh for now
+    } catch (err) {
+      console.error("Failed to delete contact", err);
+    }
+  };
+
+  const handleDelete = (contact: Contact) => {
+    withBiometricGate(() => performDelete(contact.id), `Delete Contact (${contact.firstName} ${contact.lastName})`)();
+  };
 
   const columns: ColumnDef<Contact>[] = [
     {
@@ -137,7 +153,10 @@ export function ContactListTable({ contacts, isLoading }: ContactListTableProps)
               <DropdownMenuItem>
                 <Archive className="w-4 h-4 mr-2 text-muted-foreground" /> Archive
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-red-600 focus:text-red-600">
+              <DropdownMenuItem 
+                className="text-red-600 focus:text-red-600"
+                onClick={() => handleDelete(contact)}
+              >
                 <Trash2 className="w-4 h-4 mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -165,4 +165,8 @@ export class QuotationService {
 
     return revision;
   }
+
+  static async deleteQuotation(id: string): Promise<void> {
+    await quotationRepo.hardDelete(id);
+  }
 }

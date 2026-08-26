@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useBiometricConfirm } from "@/features/auth/hooks/useBiometricConfirm";
+import { BiometricAuditService, BiometricAuditLog } from "@/services/biometric-audit.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Fingerprint, ShieldCheck, Trash2, Smartphone, Key, AlertCircle } from "lucide-react";
+import { Loader2, Fingerprint, ShieldCheck, Trash2, Smartphone, Key, AlertCircle, Activity, CheckCircle } from "lucide-react";
 
 export function SecuritySettings() {
   const {
@@ -18,6 +19,22 @@ export function SecuritySettings() {
 
   const [deviceLabelInput, setDeviceLabelInput] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<BiometricAuditLog[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(true);
+
+  useEffect(() => {
+    async function fetchLogs() {
+      try {
+        const logs = await BiometricAuditService.getRecentLogs(20);
+        setAuditLogs(logs.data);
+      } catch (err) {
+        console.error("Failed to fetch biometric logs:", err);
+      } finally {
+        setIsLoadingLogs(false);
+      }
+    }
+    fetchLogs();
+  }, []);
 
   const handleRegister = async () => {
     setIsRegistering(true);
@@ -151,6 +168,56 @@ export function SecuritySettings() {
                 </Button>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+      {/* Biometric Action Log */}
+      <div className="bg-card border rounded-xl p-5 space-y-4 shadow-sm">
+        <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+          <Activity className="w-4 h-4 text-muted-foreground" />
+          Biometric Action Log
+        </h4>
+
+        {isLoadingLogs ? (
+          <div className="py-6 flex justify-center">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : auditLogs.length === 0 ? (
+          <div className="py-6 text-center text-sm text-muted-foreground border border-dashed rounded-lg bg-muted/20">
+            No biometric actions logged yet.
+          </div>
+        ) : (
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full text-sm text-left text-muted-foreground">
+              <thead className="text-xs uppercase bg-muted/50 border-b border-border">
+                <tr>
+                  <th scope="col" className="px-4 py-3">Action</th>
+                  <th scope="col" className="px-4 py-3">User ID</th>
+                  <th scope="col" className="px-4 py-3">Verified</th>
+                  <th scope="col" className="px-4 py-3 text-right">Timestamp</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLogs.map((log) => (
+                  <tr key={log.id} className="border-b border-border last:border-0 bg-background hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium text-foreground">{log.action}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{log.userId?.substring(0, 8)}...</td>
+                    <td className="px-4 py-3">
+                      {log.verified ? (
+                        <span className="flex items-center gap-1 text-emerald-500 font-medium">
+                          <CheckCircle className="w-3.5 h-3.5" /> Yes
+                        </span>
+                      ) : (
+                        <span className="text-destructive font-medium">No</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right whitespace-nowrap">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

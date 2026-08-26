@@ -80,4 +80,8 @@ export class InventoryService {
     
     await inventoryRepo.update(item.id, item);
   }
+
+  static async deleteItem(id: string): Promise<void> {
+    await inventoryRepo.hardDelete(id);
+  }
 }

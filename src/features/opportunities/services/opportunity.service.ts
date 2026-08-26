@@ -18,4 +18,8 @@ export class OpportunityService {
     const created = await opportunityRepo.create(data, userId);
     return created.id;
   }
+
+  static async deleteOpportunity(id: string): Promise<void> {
+    await opportunityRepo.hardDelete(id);
+  }
 }

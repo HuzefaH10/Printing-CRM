@@ -5,6 +5,8 @@ import { Quotation } from "../models/quotation";
 import { DataTable } from "@/components/ui/data-table/DataTable";
 import { ColumnDef } from "@tanstack/react-table";
 import { useRouter } from "next/navigation";
+import { QuotationService } from "../services/quotation.service";
+import { useBiometricGate } from "@/features/auth/hooks/useBiometricGate";
 import { Badge } from "@/components/ui/badge";
 import { Building2, MoreHorizontal, Edit, Trash2, FileText, CheckCircle2, Archive, Target } from "lucide-react";
 import { 
@@ -24,6 +26,33 @@ interface QuotationListTableProps {
 
 export function QuotationListTable({ quotations, isLoading }: QuotationListTableProps) {
   const router = useRouter();
+  const { withBiometricGate } = useBiometricGate();
+
+  const performDelete = async (id: string) => {
+    try {
+      await QuotationService.deleteQuotation(id);
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const performApprove = async (id: string) => {
+    try {
+      await QuotationService.updateQuotation(id, { status: "Approved" }, "current_user", "Approved quotation");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = (quote: Quotation) => {
+    withBiometricGate(() => performDelete(quote.id), `Delete Quotation (${quote.quotationNumber})`)();
+  };
+
+  const handleApprove = (quote: Quotation) => {
+    withBiometricGate(() => performApprove(quote.id), `Approve Quotation (${quote.quotationNumber})`)();
+  };
 
   const columns: ColumnDef<Quotation>[] = [
     {
@@ -121,11 +150,11 @@ export function QuotationListTable({ quotations, isLoading }: QuotationListTable
                 <Edit className="w-4 h-4 mr-2 text-muted-foreground" /> Edit Draft
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" /> Mark Accepted
+              <DropdownMenuItem onClick={() => handleApprove(quote)}>
+                <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" /> Mark Approved
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Archive className="w-4 h-4 mr-2 text-muted-foreground" /> Archive
+              <DropdownMenuItem onClick={() => handleDelete(quote)} className="text-red-600 focus:text-red-600">
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

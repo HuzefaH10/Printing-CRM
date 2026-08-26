@@ -13,6 +13,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { OpportunityService } from "../services/opportunity.service";
 import { JobService } from "@/features/jobs/services/job.service";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBiometricGate } from "@/features/auth/hooks/useBiometricGate";
+import { Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +33,23 @@ const COLUMNS: { id: OpportunityStatus; title: string; color: string }[] = [
 
 function SortableOpportunityCard({ opportunity }: { opportunity: Opportunity }) {
   const router = useRouter();
+  const { withBiometricGate } = useBiometricGate();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: opportunity.id, data: { type: "Opportunity", opportunity } });
+
+  const performDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await OpportunityService.deleteOpportunity(opportunity.id);
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    withBiometricGate(() => performDelete(e), `Delete Opportunity (${opportunity.title})`)();
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -49,7 +67,15 @@ function SortableOpportunityCard({ opportunity }: { opportunity: Opportunity }) 
         isDragging ? "opacity-30" : "opacity-100"
       }`}
     >
-      <h4 className="font-medium text-sm mb-1">{opportunity.title}</h4>
+      <div className="flex justify-between items-start mb-1">
+        <h4 className="font-medium text-sm pr-6">{opportunity.title}</h4>
+        <button 
+          onClick={handleDelete}
+          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1 rounded transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+        </button>
+      </div>
       <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{opportunity.organizationId}</p>
       
       <div className="flex justify-between items-center text-xs mt-3 pt-3 border-t">

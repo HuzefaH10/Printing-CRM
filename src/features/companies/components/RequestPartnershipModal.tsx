@@ -7,7 +7,7 @@ import { ContactService } from "@/features/contacts/services/contact.service";
 import { OutreachSettingsService } from "@/features/settings/services/outreach-settings.service";
 import { OutreachSettings, DEFAULT_OUTREACH_SETTINGS } from "@/features/settings/models/outreach-settings";
 import { OutreachService } from "../services/outreach.service";
-import { EmailService } from "@/services/email.service";
+import { renderPartnershipEmailHtml } from "@/utils/email-template.utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -316,7 +316,7 @@ export function RequestPartnershipModal({
               <div
                 className="p-6 text-sm text-slate-800 space-y-4 bg-white"
                 dangerouslySetInnerHTML={{
-                  __html: EmailService.renderPartnershipEmailHtml({
+                  __html: renderPartnershipEmailHtml({
                     to: recipientEmail,
                     recipientName: contactName,
                     subject: subjectLine,

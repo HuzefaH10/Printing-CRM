@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBiometricGate } from "@/features/auth/hooks/useBiometricGate";
 
 interface JobDetailDrawerProps {
   jobId: string | null;
@@ -21,6 +22,7 @@ const JOB_STAGES: JobStatus[] = ["Prepress", "Proofing", "Production", "Finishin
 
 export function JobDetailDrawer({ jobId, open, onOpenChange }: JobDetailDrawerProps) {
   const { user } = useAuth();
+  const { withBiometricGate } = useBiometricGate();
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -69,14 +71,42 @@ export function JobDetailDrawer({ jobId, open, onOpenChange }: JobDetailDrawerPr
     });
   };
 
+  const performDelete = async () => {
+    if (!jobId) return;
+    setIsUpdating(true);
+    try {
+      await jobRepo.hardDelete(jobId);
+      onOpenChange(false);
+      window.location.reload();
+    } catch (e) {
+      console.error("Failed to delete job", e);
+      alert("Failed to delete job");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDelete = () => {
+    if (job) {
+      withBiometricGate(performDelete, `Delete Job (${job.jobNumber})`)();
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Job Details {job ? `- ${job.jobNumber}` : ''}</DialogTitle>
-          <DialogDescription>
-            {job ? `Client: ${job.organizationId}` : 'Loading...'}
-          </DialogDescription>
+        <DialogHeader className="flex flex-row items-start justify-between">
+          <div>
+            <DialogTitle>Job Details {job ? `- ${job.jobNumber}` : ''}</DialogTitle>
+            <DialogDescription>
+              {job ? `Client: ${job.organizationId}` : 'Loading...'}
+            </DialogDescription>
+          </div>
+          {job && (
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isUpdating}>
+              <Trash2 className="w-4 h-4 mr-2" /> Delete Job
+            </Button>
+          )}
         </DialogHeader>
 
         {isLoading || !job ? (

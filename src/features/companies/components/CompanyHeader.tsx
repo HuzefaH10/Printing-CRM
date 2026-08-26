@@ -4,11 +4,14 @@ import React, { useState, useEffect } from "react";
 import { Company } from "../models/company";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, Globe, MapPin, MoreHorizontal, ExternalLink, Edit, Handshake, Lock } from "lucide-react";
+import { Phone, Mail, Globe, MapPin, MoreHorizontal, ExternalLink, Edit, Handshake, Lock, Trash2 } from "lucide-react";
 import { RequestPartnershipModal } from "./RequestPartnershipModal";
-import { OutreachService } from "../services/outreach.service";
+import { OutreachUtils } from "../utils/outreach.utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBiometricConfirm } from "@/features/auth/hooks/useBiometricConfirm";
+import { useBiometricGate } from "@/features/auth/hooks/useBiometricGate";
+import { companyRepo } from "../services/company.repository";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +29,8 @@ interface CompanyHeaderProps {
 export function CompanyHeader({ company, onRefreshTimeline }: CompanyHeaderProps) {
   const { profile } = useAuth();
   const { confirmWithBiometric } = useBiometricConfirm();
+  const { withBiometricGate } = useBiometricGate();
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [rateLimitInfo, setRateLimitInfo] = useState<{ isLimited: boolean; minutesRemaining: number; elapsedMs: number }>({
     isLimited: false,
@@ -33,12 +38,23 @@ export function CompanyHeader({ company, onRefreshTimeline }: CompanyHeaderProps
     elapsedMs: Infinity,
   });
 
-  const hasPermission = OutreachService.hasSalesPermission(profile?.role);
+  const hasPermission = OutreachUtils.hasSalesPermission(profile?.role);
+
+  const performDelete = async () => {
+    try {
+      await companyRepo.hardDelete(company.id);
+      router.push("/companies");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = withBiometricGate(performDelete, `Delete Company (${company.name})`);
 
   // Recalculate rate limit status
   useEffect(() => {
     const updateRateLimit = () => {
-      const info = OutreachService.isRateLimited(company.lastOutreachSentAt);
+      const info = OutreachUtils.isRateLimited(company.lastOutreachSentAt);
       setRateLimitInfo(info);
     };
 
@@ -58,7 +74,7 @@ export function CompanyHeader({ company, onRefreshTimeline }: CompanyHeaderProps
 
   const handleModalSuccess = () => {
     // Immediately trigger rate limit status update
-    const info = OutreachService.isRateLimited(new Date().toISOString());
+    const info = OutreachUtils.isRateLimited(new Date().toISOString());
     setRateLimitInfo(info);
 
     if (onRefreshTimeline) {
@@ -168,7 +184,10 @@ export function CompanyHeader({ company, onRefreshTimeline }: CompanyHeaderProps
                 Share Profile <ExternalLink className="w-4 h-4 ml-auto" />
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive">Archive Company</DropdownMenuItem>
+              <DropdownMenuItem className="text-destructive" onClick={handleDelete}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Company
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

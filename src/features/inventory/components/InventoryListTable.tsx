@@ -13,8 +13,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Loader2, ArrowUpDown, AlertTriangle, Package } from "lucide-react";
+import { Search, Loader2, ArrowUpDown, AlertTriangle, Package, MoreHorizontal, Trash2 } from "lucide-react";
 import { InventoryItem } from "../models/inventory";
+import { useBiometricGate } from "@/features/auth/hooks/useBiometricGate";
+import { InventoryService } from "../services/inventory.service";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 interface InventoryListTableProps {
   items: InventoryItem[];
@@ -23,8 +31,23 @@ interface InventoryListTableProps {
 
 export function InventoryListTable({ items, isLoading }: InventoryListTableProps) {
   const router = useRouter();
+  const { withBiometricGate } = useBiometricGate();
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+
+  const performDelete = async (id: string) => {
+    try {
+      await InventoryService.deleteItem(id);
+      window.location.reload();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent, item: InventoryItem) => {
+    e.stopPropagation();
+    withBiometricGate(() => performDelete(item.id), `Delete Inventory Item (${item.itemName})`)();
+  };
 
   const categories = ["All", ...Array.from(new Set(items.map(i => i.category)))];
 
@@ -137,10 +160,21 @@ export function InventoryListTable({ items, isLoading }: InventoryListTableProps
                     <TableCell className="text-right font-medium">
                       {new Intl.NumberFormat('en-US', { style: 'currency', currency: item.currency }).format(item.inventoryValue)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
+                    <TableCell className="text-right" onClick={e => e.stopPropagation()}>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md text-sm font-medium hover:bg-accent hover:text-accent-foreground">
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/inventory/${item.id}`)}>
+                            View Item
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={(e) => handleDelete(e, item)}>
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 );
