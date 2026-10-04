@@ -18,6 +18,7 @@ export interface StockCategory extends BaseModel {
   groupByColumn?: string; // e.g. 'paper_type' to group by
   sortByColumn?: string;
   icon?: string; // lucide icon name
+  sortOrder?: number; // for manual ordering in the sidebar
 }
 
 export interface StockItem extends BaseModel {
