@@ -25,7 +25,7 @@ import {
   ChevronDown,
   Briefcase
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 
 const NAV_GROUPS = [
@@ -78,6 +78,114 @@ const NAV_GROUPS = [
   }
 ];
 
+import { stockCategoryRepo } from "@/features/inventory/services/stock.repository";
+import { StockCategory } from "@/features/inventory/models/stock";
+import { ChevronRight, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+
+function WarehouseNavItem({ item, pathname }: { item: any, pathname: string }) {
+  const [isOpen, setIsOpen] = useState(pathname.startsWith("/inventory"));
+  const [categories, setCategories] = useState<StockCategory[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  
+  // React is already imported at top or available in Next.js
+  
+  useEffect(() => {
+    const unsub = stockCategoryRepo.subscribe([], (data) => setCategories(data));
+    return () => unsub();
+  }, []);
+
+  const isActive = pathname === "/inventory";
+
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) return;
+    const slug = newCatName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    await stockCategoryRepo.create({
+      name: newCatName,
+      slug,
+      columns: []
+    });
+    setNewCatName("");
+    setIsAdding(false);
+  };
+
+  return (
+    <div>
+      <div 
+        className={cn(
+          "flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 cursor-pointer group",
+          isActive 
+            ? "bg-primary/[0.12] text-primary" 
+            : "text-sidebar-foreground/60 hover:bg-white/[0.04] hover:text-sidebar-foreground/90"
+        )}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center gap-3">
+          <item.icon className={cn(
+            "w-[18px] h-[18px] transition-colors duration-150 shrink-0", 
+            isActive ? "text-primary" : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70"
+          )} />
+          {item.name}
+        </div>
+        <ChevronRight className={cn("w-3.5 h-3.5 transition-transform", isOpen && "rotate-90")} />
+      </div>
+      
+      {isOpen && (
+        <div className="pl-9 pr-3 py-1 space-y-1">
+          {categories.map(cat => (
+            <Link
+              key={cat.id}
+              href={`/inventory/stock/${cat.id}`}
+              className={cn(
+                "block py-1.5 px-2 rounded-md text-xs transition-colors",
+                pathname === `/inventory/stock/${cat.id}`
+                  ? "text-primary font-medium bg-primary/10"
+                  : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-white/5"
+              )}
+            >
+              {cat.name}
+            </Link>
+          ))}
+          
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-1.5 py-1.5 px-2 w-full rounded-md text-xs text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors mt-1"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Category
+          </button>
+        </div>
+      )}
+
+      <Dialog open={isAdding} onOpenChange={setIsAdding}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Stock Category</DialogTitle>
+            <DialogDescription>
+              Create a new inventory category. You can define its flexible columns later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="e.g. Paper, Toner, Machine Parts"
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAdding(false)}>Cancel</Button>
+            <Button onClick={handleAddCategory}>Add Category</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export function Sidebar() {
   const pathname = usePathname();
 
@@ -107,6 +215,10 @@ export function Sidebar() {
               </h4>
               <div className="space-y-0.5">
                 {group.items.map((item) => {
+                  if (item.name === "Warehouse") {
+                    return <WarehouseNavItem key={item.name} item={item} pathname={pathname} />;
+                  }
+
                   const isActive = pathname.startsWith(item.href) && item.href !== "/" || (item.href === "/" && pathname === "/");
                   return (
                     <Link
