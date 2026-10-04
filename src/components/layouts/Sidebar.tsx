@@ -22,6 +22,7 @@ import {
   Activity,
   ShoppingCart,
   DollarSign,
+  ChevronDown,
   Briefcase,
   Trash2,
   GripVertical
