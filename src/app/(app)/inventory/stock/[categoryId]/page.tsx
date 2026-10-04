@@ -22,6 +22,7 @@ export default function StockCategoryPage({ params }: { params: { categoryId: st
   useEffect(() => {
     const unsubCat = stockCategoryRepo.subscribe(
       [{ field: "id", operator: "==", value: params.categoryId }],
+      {},
       (data) => {
         if (data.length > 0) setCategory(data[0]);
       }
@@ -29,6 +30,7 @@ export default function StockCategoryPage({ params }: { params: { categoryId: st
     
     const unsubItems = stockItemRepo.subscribe(
       [{ field: "categoryId", operator: "==", value: params.categoryId }],
+      {},
       (data) => {
         setItems(data);
         setLoading(false);

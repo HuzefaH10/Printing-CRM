@@ -93,7 +93,7 @@ function WarehouseNavItem({ item, pathname }: { item: any, pathname: string }) {
   // React is already imported at top or available in Next.js
   
   useEffect(() => {
-    const unsub = stockCategoryRepo.subscribe([], (data) => setCategories(data));
+    const unsub = stockCategoryRepo.subscribe([], {}, (data) => setCategories(data));
     return () => unsub();
   }, []);
 
