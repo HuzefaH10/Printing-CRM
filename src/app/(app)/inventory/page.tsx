@@ -60,15 +60,20 @@ export default function InventoryPage() {
           </Button>
           <Button size="sm" onClick={async () => {
             await inventoryRepo.create({
-              sku: "NEW-" + Math.floor(Math.random()*10000),
-              name: "New Material",
-              category: "PAPER",
-              unitOfMeasure: "Reams",
+              itemCode: "NEW-" + Math.floor(Math.random()*10000),
+              itemName: "New Material",
+              category: "Paper",
+              unit: "Reams",
+              currentQuantity: 0,
               availableQuantity: 0,
               reservedQuantity: 0,
+              minimumStock: 5,
               reorderPoint: 10,
-              unitCost: 0,
-              inventoryValue: 0
+              averageCost: 0,
+              inventoryValue: 0,
+              currency: "KWD",
+              tags: [],
+              archived: false
             });
             loadItems();
           }}>
