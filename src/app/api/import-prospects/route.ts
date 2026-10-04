@@ -119,29 +119,79 @@ export async function GET() {
       });
     }
 
-    // Now insert them into Firestore
+    // Now insert them into Firestore with deduplication logic
     let count = 0;
     const now = new Date().toISOString();
     
-    // We could batch this, but for < 1000 records, sequential or Promise.all is fine.
-    // Let's use Promise.all with setDoc to generate a random ID
-    const promises = Array.from(prospectsMap.values()).map(async (prospect) => {
-      // Just double check we have valid defaults
-      const finalProspect = {
-        ...prospect,
-        status: prospect.status || 'New',
-        createdAt: now,
-        updatedAt: now,
-      };
+    const prospectsRef = collection(fireDb, 'prospects');
+    const companiesRef = collection(fireDb, 'companies');
+    const auditRef = collection(fireDb, 'auditLogs');
+    
+    const allProspectsSnap = await getDocs(prospectsRef);
+    const allCompaniesSnap = await getDocs(companiesRef);
+
+    const existingProspects = allProspectsSnap.docs.map(d => ({ id: d.id, ref: d.ref, data: d.data(), type: 'prospect' as const }));
+    const existingCompanies = allCompaniesSnap.docs.map(d => ({ id: d.id, ref: d.ref, data: d.data(), type: 'company' as const }));
+    
+    const allExisting = [...existingProspects, ...existingCompanies];
+
+    const promises = Array.from(prospectsMap.entries()).map(async ([key, prospect]) => {
+      const newNorm = normalizeName(prospect.organizationName || '');
       
-      const newDocRef = doc(collection(fireDb, 'prospects'));
-      await setDoc(newDocRef, finalProspect);
-      count++;
+      let conflict = false;
+      for (const existing of allExisting) {
+        const existName = existing.data.organizationName || existing.data.name || '';
+        const existNorm = normalizeName(existName);
+        
+        if (existNorm && newNorm && (existNorm.includes(newNorm) || newNorm.includes(existNorm))) {
+          if (existing.type === 'company' || existing.data.convertedCompanyId || existing.data.status === 'Converted') {
+            console.log(`CONFLICT: ${prospect.organizationName} already exists as a Company or Converted Prospect (${existName}). Skipping.`);
+            conflict = true;
+            break;
+          }
+          
+          if ((existing.data.notes && existing.data.notes.trim() !== '') || existing.data.opportunityId) {
+            console.log(`CONFLICT: ${prospect.organizationName} already exists as a Prospect with notes/activity (${existName}). Skipping.`);
+            conflict = true;
+            break;
+          }
+
+          console.log(`DEDUPLICATION: Found matching old prospect ${existName} for ${prospect.organizationName}. Deleting old.`);
+          const { deleteDoc, addDoc } = require('firebase/firestore');
+          await deleteDoc(existing.ref);
+          
+          await addDoc(auditRef, {
+            action: 'DELETE_FOR_DEDUPLICATION',
+            entityType: 'prospect',
+            entityId: existing.id,
+            details: {
+              deletedName: existName,
+              replacedByName: prospect.organizationName
+            },
+            userId: 'system-import',
+            timestamp: now,
+            createdAt: now
+          });
+        }
+      }
+
+      if (!conflict) {
+        const finalProspect = {
+          ...prospect,
+          status: prospect.status || 'New',
+          createdAt: now,
+          updatedAt: now,
+        };
+        
+        const newDocRef = doc(collection(fireDb, 'prospects'));
+        await setDoc(newDocRef, finalProspect);
+        count++;
+      }
     });
 
     await Promise.all(promises);
 
-    return NextResponse.json({ success: true, imported: count, message: `Successfully imported and merged prospects.` });
+    return NextResponse.json({ success: true, imported: count, message: `Successfully imported and merged prospects with deduplication.` });
   } catch (error: any) {
     console.error("Import error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
