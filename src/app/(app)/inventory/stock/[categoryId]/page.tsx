@@ -10,7 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-export default function StockCategoryPage({ params }: { params: { categoryId: string } }) {
+export default function StockCategoryPage({ params }: { params: any }) {
+  const unwrappedParams = React.use(params) as { categoryId: string };
+  const categoryId = unwrappedParams.categoryId;
+  
   const [category, setCategory] = useState<StockCategory | null>(null);
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +24,7 @@ export default function StockCategoryPage({ params }: { params: { categoryId: st
 
   useEffect(() => {
     const unsubCat = stockCategoryRepo.subscribe(
-      [{ field: "id", operator: "==", value: params.categoryId }],
+      [{ field: "id", operator: "==", value: categoryId }],
       {},
       (data) => {
         if (data.length > 0) setCategory(data[0]);
@@ -29,7 +32,7 @@ export default function StockCategoryPage({ params }: { params: { categoryId: st
     );
     
     const unsubItems = stockItemRepo.subscribe(
-      [{ field: "categoryId", operator: "==", value: params.categoryId }],
+      [{ field: "categoryId", operator: "==", value: categoryId }],
       {},
       (data) => {
         setItems(data);
@@ -41,7 +44,7 @@ export default function StockCategoryPage({ params }: { params: { categoryId: st
       unsubCat();
       unsubItems();
     };
-  }, [params.categoryId]);
+  }, [categoryId]);
 
   const handleDataChange = async (id: string, field: string, value: any) => {
     const item = items.find(i => i.id === id);
