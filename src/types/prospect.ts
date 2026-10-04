@@ -18,6 +18,15 @@ export type ProspectLeadStatus = 'Cold' | 'Warm' | 'Hot';
 export type ProspectRating = '*' | '**' | '***' | '****' | '*****' | string; // To allow arbitrary rating strings from excel
 export type GovPrivate = 'Government' | 'Private' | 'Other';
 
+export type ContactStatus = 
+  | 'Not Contacted'
+  | 'Reached Out'
+  | 'Awaiting Response'
+  | 'Response Received'
+  | 'Offer Accepted'
+  | 'Declined'
+  | 'Follow-up Later';
+
 export interface Prospect {
   id?: string;
   
@@ -32,6 +41,8 @@ export interface Prospect {
   priority: ProspectPriority;
   rating: ProspectRating;
   status: ProspectStatus;
+  contactStatus?: ContactStatus;
+  lastContactedAt?: string;
   source: string;
   contactVerificationStatus?: string;
   sourceList?: string;

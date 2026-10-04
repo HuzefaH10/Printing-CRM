@@ -34,6 +34,48 @@ export const companyColumns: ColumnDef<Company>[] = [
     ),
   },
   {
+    accessorKey: "contactStatus",
+    header: "Outreach",
+    cell: ({ row }) => {
+      const status = row.original.contactStatus || 'Not Contacted';
+      let color = 'text-slate-600 bg-slate-100 dark:bg-slate-800';
+      if (status === 'Reached Out') color = 'text-blue-600 bg-blue-100 dark:bg-blue-900/30';
+      if (status === 'Awaiting Response') color = 'text-amber-600 bg-amber-100 dark:bg-amber-900/30';
+      if (status === 'Response Received') color = 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30';
+      if (status === 'Offer Accepted') color = 'text-emerald-700 bg-emerald-200 dark:bg-emerald-900/50';
+      if (status === 'Declined') color = 'text-red-600 bg-red-100 dark:bg-red-900/30';
+      if (status === 'Follow-up Later') color = 'text-purple-600 bg-purple-100 dark:bg-purple-900/30';
+      
+      const handleChange = async (newVal: string) => {
+        // dynamic import or just standard import
+        const { companyRepo } = await import('@/features/companies/services/company.repository');
+        const updates: any = { contactStatus: newVal };
+        if (newVal === 'Reached Out') {
+          updates['relationshipTracker.lastContactAt'] = new Date().toISOString();
+        }
+        await companyRepo.update(row.original.id!, updates, "unknown-user");
+      };
+
+      return (
+        <div onClick={e => e.stopPropagation()}>
+          <select 
+            value={status} 
+            onChange={(e) => handleChange(e.target.value)}
+            className={`px-2 py-0.5 rounded text-xs font-medium border-0 focus:ring-0 ${color}`}
+          >
+            <option value="Not Contacted">Not Contacted</option>
+            <option value="Reached Out">Reached Out</option>
+            <option value="Awaiting Response">Awaiting Response</option>
+            <option value="Response Received">Response Received</option>
+            <option value="Offer Accepted">Offer Accepted</option>
+            <option value="Declined">Declined</option>
+            <option value="Follow-up Later">Follow-up Later</option>
+          </select>
+        </div>
+      );
+    },
+  },
+  {
     accessorKey: "intelligence.overallScore",
     header: "Intel Score",
     cell: ({ row }) => {

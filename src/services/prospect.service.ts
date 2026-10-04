@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { Prospect } from '@/types/prospect';
+import { AuditService } from '@/services/audit.service';
 // Ensure we have a Company type or at least an any type for the conversion to company
 // The user has a companies module, we will assume standard company type exists, or use Partial<any> for now.
 
@@ -60,10 +61,24 @@ export class ProspectService {
    */
   static async updateProspect(id: string, updates: Partial<Omit<Prospect, 'id' | 'createdAt'>>): Promise<void> {
     const docRef = doc(db, COLLECTION_NAME, id);
+    const oldSnap = await getDoc(docRef);
+    const oldData = oldSnap.exists() ? oldSnap.data() : null;
+
     await updateDoc(docRef, {
       ...updates,
       updatedAt: new Date().toISOString()
     });
+
+    if (oldData) {
+      await AuditService.logEvent({
+        entityId: id,
+        entityType: 'prospect',
+        action: 'UPDATED',
+        oldValue: oldData,
+        newValue: { ...oldData, ...updates },
+        reason: updates.contactStatus ? `Updated contact status to ${updates.contactStatus}` : 'Updated prospect'
+      });
+    }
   }
 
   /**
@@ -80,7 +95,7 @@ export class ProspectService {
    */
   static async convertToCompany(prospectId: string): Promise<string> {
     const prospectRef = doc(db, COLLECTION_NAME, prospectId);
-    const companyRef = doc(collection(db, 'companies'));
+    const companyRef = doc(collection(db, 'organizations'));
 
     try {
       await runTransaction(db, async (transaction) => {
@@ -125,7 +140,8 @@ export class ProspectService {
             responseTimeDays: 0,
             averageFollowUpDays: 0,
             communicationFrequency: 'Ad-hoc',
-            health: 'FAIR'
+            health: 'FAIR',
+            lastContactAt: pData.lastContactedAt || pData.lastContact || null
           },
 
           isCustomer: false,
@@ -136,6 +152,7 @@ export class ProspectService {
           language: 'EN',
           priority: pData.priority === 'Critical' ? 'URGENT' : (pData.priority?.toUpperCase() || 'MEDIUM'),
           status: 'PROSPECT',
+          contactStatus: pData.contactStatus || 'Not Contacted',
           
           tags: pData.tags || [],
           source: pData.source || 'Prospect Conversion',

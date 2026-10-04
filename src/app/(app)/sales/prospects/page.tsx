@@ -22,7 +22,7 @@ import { MethodologyContent } from "./MethodologyContent";
 import { exportToExcel } from "@/features/companies/utils/excel.utils";
 import { Download } from "lucide-react";
 
-type SortField = 'organizationName' | 'industry' | 'status' | 'priority' | 'rating';
+type SortField = 'organizationName' | 'industry' | 'status' | 'priority' | 'rating' | 'contactStatus';
 type SortOrder = 'asc' | 'desc';
 
 export default function ProspectsPage() {
@@ -87,6 +87,15 @@ export default function ProspectsPage() {
     await ProspectService.updateProspect(id, { priority: newPriority });
   };
 
+  const handleContactStatusChange = async (id: string, newStatus: string) => {
+    const updates: any = { contactStatus: newStatus };
+    if (newStatus === "Reached Out") {
+      updates.lastContactedAt = new Date().toISOString();
+    }
+    setProspects(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    await ProspectService.updateProspect(id, updates);
+  };
+
   const handleDelete = async (id: string) => {
     if (confirm("Are you sure you want to delete this prospect?")) {
       await ProspectService.deleteProspect(id);
@@ -146,6 +155,11 @@ export default function ProspectsPage() {
       result = result.filter(p => p.status === 'Converted');
     }
 
+    if (activeFilter && activeFilter.startsWith('contact_')) {
+      const targetStatus = activeFilter.replace('contact_', '').replace(/_/g, ' ');
+      result = result.filter(p => (p.contactStatus || 'Not Contacted').toLowerCase() === targetStatus.toLowerCase());
+    }
+
     result.sort((a, b) => {
       let aVal: any = a[sortField] || '';
       let bVal: any = b[sortField] || '';
@@ -178,6 +192,12 @@ export default function ProspectsPage() {
   const hot = prospects.filter(p => p.priority === 'High' || p.priority === 'Critical').length;
   const converted = prospects.filter(p => p.status === 'Converted').length;
 
+  const contactStats = {
+    reachedOut: prospects.filter(p => p.contactStatus === 'Reached Out').length,
+    awaiting: prospects.filter(p => p.contactStatus === 'Awaiting Response').length,
+    accepted: prospects.filter(p => p.contactStatus === 'Offer Accepted').length,
+  };
+
   const renderStars = (rating: string) => {
     const count = rating?.length || 0;
     return (
@@ -198,6 +218,19 @@ export default function ProspectsPage() {
       case 'High': return 'text-amber-600 bg-amber-100 dark:bg-amber-900/30';
       case 'Medium': return 'text-blue-600 bg-blue-100 dark:bg-blue-900/30';
       case 'Low': return 'text-slate-600 bg-slate-100 dark:bg-slate-800';
+      default: return 'text-muted-foreground bg-muted';
+    }
+  };
+
+  const getContactStatusColor = (status: string = "Not Contacted") => {
+    switch(status) {
+      case 'Not Contacted': return 'text-slate-600 bg-slate-100 dark:bg-slate-800';
+      case 'Reached Out': return 'text-blue-600 bg-blue-100 dark:bg-blue-900/30';
+      case 'Awaiting Response': return 'text-amber-600 bg-amber-100 dark:bg-amber-900/30';
+      case 'Response Received': return 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30';
+      case 'Offer Accepted': return 'text-emerald-700 bg-emerald-200 dark:bg-emerald-900/50';
+      case 'Declined': return 'text-red-600 bg-red-100 dark:bg-red-900/30';
+      case 'Follow-up Later': return 'text-purple-600 bg-purple-100 dark:bg-purple-900/30';
       default: return 'text-muted-foreground bg-muted';
     }
   };
@@ -279,6 +312,20 @@ export default function ProspectsPage() {
           </Card>
         </button>
       </div>
+      
+      {/* Contact Status Breakdown */}
+      <div className="flex flex-wrap gap-2 text-sm">
+        <span className="font-medium text-muted-foreground mr-2">Outreach:</span>
+        <button onClick={() => setActiveFilter(activeFilter === 'contact_reached_out' ? null : 'contact_reached_out')} className={`px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-medium ${activeFilter === 'contact_reached_out' ? 'ring-2 ring-blue-500' : ''}`}>
+          {contactStats.reachedOut} Reached Out
+        </button>
+        <button onClick={() => setActiveFilter(activeFilter === 'contact_awaiting_response' ? null : 'contact_awaiting_response')} className={`px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 font-medium ${activeFilter === 'contact_awaiting_response' ? 'ring-2 ring-amber-500' : ''}`}>
+          {contactStats.awaiting} Awaiting Response
+        </button>
+        <button onClick={() => setActiveFilter(activeFilter === 'contact_offer_accepted' ? null : 'contact_offer_accepted')} className={`px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-medium ${activeFilter === 'contact_offer_accepted' ? 'ring-2 ring-emerald-500' : ''}`}>
+          {contactStats.accepted} Offer Accepted
+        </button>
+      </div>
 
       <Card className="card-elevated border-border/50">
         <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
@@ -335,6 +382,9 @@ export default function ProspectsPage() {
                 </th>
                 <th className="px-6 py-4 font-medium cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('priority')}>
                   Priority {sortField === 'priority' && (sortOrder === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="px-6 py-4 font-medium cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('contactStatus')}>
+                  Outreach {sortField === 'contactStatus' && (sortOrder === 'asc' ? '↑' : '↓')}
                 </th>
                 <th className="px-6 py-4 font-medium cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('rating')}>
                   Rating {sortField === 'rating' && (sortOrder === 'asc' ? '↑' : '↓')}
@@ -437,12 +487,36 @@ export default function ProspectsPage() {
                         </Select>
                       </td>
                       <td className="px-6 py-4">
+                        <Select 
+                          value={p.contactStatus || 'Not Contacted'} 
+                          onValueChange={(val: string | null) => val && handleContactStatusChange(p.id!, val)}
+                        >
+                          <SelectTrigger className="h-7 text-xs border-0 bg-transparent shadow-none w-32 p-0 -ml-2 focus:ring-0">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${getContactStatusColor(p.contactStatus)}`}>
+                              {p.contactStatus || 'Not Contacted'}
+                            </span>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Not Contacted">Not Contacted</SelectItem>
+                            <SelectItem value="Reached Out">Reached Out</SelectItem>
+                            <SelectItem value="Awaiting Response">Awaiting Response</SelectItem>
+                            <SelectItem value="Response Received">Response Received</SelectItem>
+                            <SelectItem value="Offer Accepted">Offer Accepted</SelectItem>
+                            <SelectItem value="Declined">Declined</SelectItem>
+                            <SelectItem value="Follow-up Later">Follow-up Later</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-6 py-4">
                         {renderStars(p.rating)}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="View details" onClick={() => setExpandedId(expandedId === p.id ? null : p.id!)}>
                             <Search className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-blue-600" title="Quick Action: I've Reached Out" onClick={() => handleContactStatusChange(p.id!, "Reached Out")}>
+                            <CheckCircle2 className="w-4 h-4" />
                           </Button>
                           {p.status !== 'Converted' && (
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-emerald-600" title="Convert to Company" onClick={() => setProspectToConvert(p)}>

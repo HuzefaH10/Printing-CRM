@@ -163,6 +163,7 @@ export interface Company extends BaseModel {
   leadSource?: string;
   priority: PriorityLevel;
   status: CompanyStatus;
+  contactStatus?: import('@/types/prospect').ContactStatus;
 
   // Financials
   potentialRevenue?: number;
