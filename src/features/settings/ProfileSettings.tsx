@@ -49,7 +49,7 @@ export function ProfileSettings() {
         title: "Profile updated",
         description: "Your profile changes have been saved.",
       });
-    } catch (error) {
+    } catch {
       toast.add({
         type: "error",
         title: "Error",

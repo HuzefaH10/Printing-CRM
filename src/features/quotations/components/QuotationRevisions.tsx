@@ -27,7 +27,7 @@ export function QuotationRevisions({ quotation }: Props) {
       const { data } = await quotationRepo.list([{ field: "originalQuotationId", operator: "==", value: parentId }]);
       
       // Also get the parent itself if it's not in the list (because originalQuotationId might only be on children)
-      let allRevs = [...data];
+      const allRevs = [...data];
       if (!allRevs.find(q => q.id === parentId)) {
         const parent = await quotationRepo.get(parentId);
         if (parent) allRevs.push(parent);

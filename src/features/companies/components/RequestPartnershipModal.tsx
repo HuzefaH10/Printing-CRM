@@ -51,6 +51,12 @@ export function RequestPartnershipModal({
   const [isSending, setIsSending] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; name?: string; message?: string }>({});
 
+  const applyTemplate = (template: EmailTemplate, data: Record<string, string>) => {
+    setSubjectLine(EmailTemplateService.parseTemplate(template.subject, data));
+    setCustomMessage(EmailTemplateService.parseTemplate(template.bodyTemplate, data));
+    setIsEdited(false);
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -107,12 +113,6 @@ export function RequestPartnershipModal({
 
     initModalData();
   }, [isOpen, company]);
-
-  const applyTemplate = (template: EmailTemplate, data: Record<string, string>) => {
-    setSubjectLine(EmailTemplateService.parseTemplate(template.subject, data));
-    setCustomMessage(EmailTemplateService.parseTemplate(template.bodyTemplate, data));
-    setIsEdited(false);
-  };
 
   const handleTemplateChange = (templateId: string | null) => {
     if (!templateId) return;

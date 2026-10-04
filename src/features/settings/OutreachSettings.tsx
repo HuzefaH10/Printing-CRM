@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { OutreachSettingsService } from "./services/outreach-settings.service";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
-import { Loader2, Mail, Sparkles, Building2, Phone, User, ShieldAlert, CheckCircle2, Info } from "lucide-react";
+import { Loader2, Mail, Sparkles, Building2, User, ShieldAlert, CheckCircle2, Info } from "lucide-react";
 
 const outreachSchema = z.object({
   senderName: z.string().min(2, "Sender name is required"),
@@ -36,8 +36,8 @@ export function OutreachSettings() {
     defaultValues: DEFAULT_OUTREACH_SETTINGS,
   });
 
-  const watchSenderEmail = form.watch("senderEmail");
-  const watchGmailUser = form.watch("gmailUser");
+  const watchSenderEmail = useWatch({ control: form.control, name: "senderEmail" });
+  const watchGmailUser = useWatch({ control: form.control, name: "gmailUser" });
 
   useEffect(() => {
     async function loadData() {

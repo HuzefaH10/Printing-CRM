@@ -30,7 +30,7 @@ export class ContactService {
   }
 
   static async updateContact(id: string, updates: Partial<Contact>, userId?: string, logReason?: string): Promise<void> {
-    let finalUpdates = { ...updates };
+    const finalUpdates = { ...updates };
     
     // Recalculate health score if relationship profile or preferences change
     if (updates.relationshipProfile || updates.preferences) {
