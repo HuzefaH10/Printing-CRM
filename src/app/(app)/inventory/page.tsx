@@ -48,7 +48,7 @@ export default function InventoryPage() {
             if (confirm('Clear all inventory data?')) {
               setIsLoading(true);
               const { data } = await inventoryRepo.list();
-              for (const item of data) await inventoryRepo.delete(item.id!);
+              for (const item of data) await inventoryRepo.hardDelete(item.id!);
               setItems([]);
               setIsLoading(false);
             }

@@ -66,7 +66,7 @@ export default function StockCategoryPage({ params }: { params: { categoryId: st
   };
 
   const handleDeleteRow = async (id: string) => {
-    await stockItemRepo.delete(id);
+    await stockItemRepo.hardDelete(id);
   };
 
   const handleDuplicateRow = async (id: string) => {
