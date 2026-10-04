@@ -21,14 +21,7 @@ export default function InventoryPage() {
     try {
       let { data } = await inventoryRepo.list();
       
-      // Generate some mock data if empty
-      if (data.length === 0) {
-        const mockItems = Array.from({ length: 15 }).map(() => InventoryService.generateMockItem());
-        for (const item of mockItems) {
-          await inventoryRepo.create(item);
-        }
-        data = mockItems;
-      }
+      // Intentionally empty. No mock items auto-generated.
       
       setItems(data);
     } catch (err) {
@@ -51,10 +44,34 @@ export default function InventoryPage() {
           <p className="text-muted-foreground">Manage raw materials, track stock movements, and ensure production readiness.</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="destructive" size="sm" onClick={async () => {
+            if (confirm('Clear all inventory data?')) {
+              setIsLoading(true);
+              const { data } = await inventoryRepo.list();
+              for (const item of data) await inventoryRepo.delete(item.id!);
+              setItems([]);
+              setIsLoading(false);
+            }
+          }}>
+            <AlertTriangle className="w-4 h-4 mr-2" /> Clear Dummy Data
+          </Button>
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" /> Export
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={async () => {
+            await inventoryRepo.create({
+              sku: "NEW-" + Math.floor(Math.random()*10000),
+              name: "New Material",
+              category: "PAPER",
+              unitOfMeasure: "Reams",
+              availableQuantity: 0,
+              reservedQuantity: 0,
+              reorderPoint: 10,
+              unitCost: 0,
+              inventoryValue: 0
+            });
+            loadItems();
+          }}>
             <Plus className="w-4 h-4 mr-2" /> Add Material
           </Button>
         </div>
