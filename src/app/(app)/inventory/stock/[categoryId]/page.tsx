@@ -1,17 +1,21 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { stockCategoryRepo, stockItemRepo } from "@/features/inventory/services/stock.repository";
-import { StockCategory, StockItem } from "@/features/inventory/models/stock";
+import { StockCategory, StockItem, ColumnDef } from "@/features/inventory/models/stock";
 import { SpreadsheetGrid } from "@/components/ui/spreadsheet-grid/SpreadsheetGrid";
 import { ColumnSettingsModal } from "@/features/inventory/components/ColumnSettingsModal";
 import { ItemFormModal } from "@/features/inventory/components/ItemFormModal";
+import { PresetPickerModal } from "@/features/inventory/components/PresetPickerModal";
+import { CATEGORY_PRESETS, mergePreset, CategoryPreset } from "@/lib/inventory/presets";
 import { Card } from "@/components/ui/card";
-import { Search, Settings, FileSpreadsheet, Plus, AlertCircle, RefreshCw } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Settings, FileSpreadsheet, Plus, AlertCircle, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AuditService } from "@/services/audit.service";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function StockCategoryPage({ params }: { params: any }) {
+  const { user } = useAuth();
   const unwrappedParams = React.use(params) as { categoryId: string };
   const categoryId = unwrappedParams.categoryId;
 
@@ -19,10 +23,10 @@ export default function StockCategoryPage({ params }: { params: any }) {
   const [items, setItems] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
 
   // Modals state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isPresetPickerOpen, setIsPresetPickerOpen] = useState(false);
   const [isItemFormOpen, setIsItemFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<StockItem | null>(null);
 
@@ -58,7 +62,8 @@ export default function StockCategoryPage({ params }: { params: any }) {
     };
   }, [categoryId]);
 
-  const handleDataChange = async (id: string, colId: string, value: any) => {
+  // Inline Cell Data Change with Autosave
+  const handleDataChange = useCallback(async (id: string, colId: string, value: any) => {
     const item = items.find(i => i.id === id);
     if (!item) return;
 
@@ -68,16 +73,13 @@ export default function StockCategoryPage({ params }: { params: any }) {
     // Optimistic UI update
     setItems(prev => prev.map(i => (i.id === id ? { ...i, values: newValues } : i)));
 
-    try {
-      await stockItemRepo.update(id, {
-        values: newValues
-      });
-    } catch (err) {
-      console.error("Failed to update item cell value:", err);
-    }
-  };
+    await stockItemRepo.update(id, {
+      values: newValues
+    });
+  }, [items]);
 
-  const handleAddRow = async (groupValue?: string) => {
+  // Add row
+  const handleAddRow = useCallback(async (groupValue?: string, targetIndex?: number) => {
     if (!category) return;
     const initialValues: Record<string, any> = {};
 
@@ -85,40 +87,88 @@ export default function StockCategoryPage({ params }: { params: any }) {
       initialValues[category.groupByColumn] = groupValue;
     }
 
-    try {
-      await stockItemRepo.create({
-        categoryId: category.id!,
-        values: initialValues
-      } as any);
-    } catch (err) {
-      console.error("Failed to create row:", err);
-    }
-  };
+    await stockItemRepo.create({
+      categoryId: category.id!,
+      values: initialValues
+    } as any);
+  }, [category]);
 
-  // Soft delete row via repository softDelete
-  const handleDeleteRow = async (id: string) => {
-    try {
-      await stockItemRepo.softDelete(id);
-    } catch (err) {
-      console.error("Failed to soft delete item:", err);
-    }
-  };
+  // Soft Delete Row
+  const handleDeleteRow = useCallback(async (id: string) => {
+    await stockItemRepo.softDelete(id);
+  }, []);
 
-  const handleDuplicateRow = async (id: string) => {
+  // Duplicate Row
+  const handleDuplicateRow = useCallback(async (id: string) => {
     const item = items.find(i => i.id === id);
     if (!item || !category) return;
-
     const currentValues = item.values || item.data || {};
 
-    try {
-      await stockItemRepo.create({
-        categoryId: category.id!,
-        values: { ...currentValues }
-      } as any);
-    } catch (err) {
-      console.error("Failed to duplicate row:", err);
-    }
-  };
+    await stockItemRepo.create({
+      categoryId: category.id!,
+      values: { ...currentValues }
+    } as any);
+  }, [items, category]);
+
+  // Add Column Inline (+)
+  const handleAddColumn = useCallback(async () => {
+    if (!category) return;
+    const cols = category.columns || [];
+    const newId = `col_${Date.now()}`;
+    const newCol: ColumnDef = {
+      id: newId,
+      label: `Column ${cols.length + 1}`,
+      type: "text",
+      required: false,
+      showInTable: true,
+      order: cols.length + 1
+    };
+
+    const updatedCols = [...cols, newCol];
+    await stockCategoryRepo.update(category.id!, { columns: updatedCols });
+  }, [category]);
+
+  // Update Column In-Place
+  const handleUpdateColumn = useCallback(async (colId: string, updates: Partial<ColumnDef>) => {
+    if (!category) return;
+    const cols = (category.columns || []).map(c => (c.id === colId ? { ...c, ...updates } : c));
+    await stockCategoryRepo.update(category.id!, { columns: cols });
+  }, [category]);
+
+  // Delete Column In-Place
+  const handleDeleteColumn = useCallback(async (colId: string) => {
+    if (!category) return;
+    const cols = (category.columns || []).filter(c => c.id !== colId);
+    await stockCategoryRepo.update(category.id!, { columns: cols });
+  }, [category]);
+
+  // Reorder Columns
+  const handleReorderColumns = useCallback(async (reordered: ColumnDef[]) => {
+    if (!category) return;
+    await stockCategoryRepo.update(category.id!, { columns: reordered });
+  }, [category]);
+
+  // Apply Preset
+  const handleApplyPreset = useCallback(async (preset: CategoryPreset = CATEGORY_PRESETS.paper) => {
+    if (!category) return;
+    const existing = category.columns || [];
+    const merged = mergePreset(existing, preset.columns);
+    const sheetsPerReam = preset.sheetsPerReam ?? category.sheetsPerReam ?? 500;
+
+    await stockCategoryRepo.update(category.id!, {
+      columns: merged,
+      sheetsPerReam,
+      presetId: preset.id
+    });
+
+    await AuditService.logEvent({
+      entityId: category.id!,
+      entityType: "category_preset",
+      action: "PRESET_APPLIED",
+      userId: user?.uid,
+      reason: `Applied ${preset.label} preset columns`
+    });
+  }, [category, user]);
 
   const handleOpenEditModal = (item: StockItem) => {
     setEditingItem(item);
@@ -139,7 +189,7 @@ export default function StockCategoryPage({ params }: { params: any }) {
         </div>
         <Card className="p-12 text-center text-muted-foreground flex items-center justify-center gap-2">
           <RefreshCw className="w-5 h-5 animate-spin text-primary" />
-          <span>Loading category inventory...</span>
+          <span>Loading category grid...</span>
         </Card>
       </div>
     );
@@ -159,20 +209,9 @@ export default function StockCategoryPage({ params }: { params: any }) {
     );
   }
 
-  const filteredItems = items.filter(item => {
-    if (!search) return true;
-    const term = search.toLowerCase();
-    const itemVals = item.values || item.data || {};
-    return Object.values(itemVals).some(val => {
-      if (typeof val === "object" && val !== null && "w" in val) {
-        return `${val.w}x${val.h}`.toLowerCase().includes(term);
-      }
-      return String(val || "").toLowerCase().includes(term);
-    });
-  });
-
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
+      {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
@@ -180,10 +219,13 @@ export default function StockCategoryPage({ params }: { params: any }) {
             {category.name}
           </h2>
           <p className="text-muted-foreground mt-1 text-sm">
-            Manage inventory items with flexible column definitions. Inline edit or open detail form.
+            Excel-style interactive grid. Single-click to select, type or Enter to edit, Tab/Enter to navigate.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsPresetPickerOpen(true)}>
+            <Sparkles className="w-4 h-4 mr-2 text-amber-500" /> Presets
+          </Button>
           <Button variant="outline" onClick={() => setIsSettingsOpen(true)}>
             <Settings className="w-4 h-4 mr-2" /> Column Settings
           </Button>
@@ -193,54 +235,40 @@ export default function StockCategoryPage({ params }: { params: any }) {
         </div>
       </div>
 
-      <Card className="card-elevated border-border/50">
-        <div className="p-4 border-b border-border/50 flex flex-col sm:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder={`Search ${category.name}...`}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 bg-muted/30"
-            />
-          </div>
-
-          <div className="text-xs text-muted-foreground font-mono">
-            {filteredItems.length} {filteredItems.length === 1 ? "item" : "items"}
-          </div>
-        </div>
-
-        {category.columns && category.columns.length > 0 ? (
-          <SpreadsheetGrid
-            columns={category.columns}
-            data={filteredItems}
-            sheetsPerReam={category.sheetsPerReam || 500}
-            reorderLevel={category.reorderLevel || 0}
-            onDataChange={handleDataChange}
-            onAddRow={handleAddRow}
-            onDeleteRow={handleDeleteRow}
-            onDuplicateRow={handleDuplicateRow}
-            onEditItemInModal={handleOpenEditModal}
-            groupByColumn={category.groupByColumn}
-          />
-        ) : (
-          <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
-            <p className="mb-4 text-base font-semibold">No columns defined for this category.</p>
-            <p className="mb-6 text-sm text-muted-foreground/80 max-w-sm">
-              Use Column Settings to select a category preset or define custom columns.
-            </p>
-            <Button onClick={() => setIsSettingsOpen(true)}>
-              <Settings className="w-4 h-4 mr-2" /> Setup Columns
-            </Button>
-          </div>
-        )}
-      </Card>
+      {/* Spreadsheet Grid */}
+      <SpreadsheetGrid
+        columns={category.columns || []}
+        data={items}
+        sheetsPerReam={category.sheetsPerReam || 500}
+        reorderLevel={category.reorderLevel || 0}
+        onDataChange={handleDataChange}
+        onAddRow={handleAddRow}
+        onDeleteRow={handleDeleteRow}
+        onDuplicateRow={handleDuplicateRow}
+        onUpdateColumn={handleUpdateColumn}
+        onAddColumn={handleAddColumn}
+        onDeleteColumn={handleDeleteColumn}
+        onReorderColumns={handleReorderColumns}
+        onApplyPreset={() => handleApplyPreset(CATEGORY_PRESETS.paper)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenPresetPicker={() => setIsPresetPickerOpen(true)}
+        onEditItemInModal={handleOpenEditModal}
+        groupByColumn={category.groupByColumn}
+      />
 
       {/* Column Settings Modal */}
       <ColumnSettingsModal
         category={category}
         open={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
+      />
+
+      {/* Preset Picker Modal */}
+      <PresetPickerModal
+        currentPresetId={category.presetId}
+        open={isPresetPickerOpen}
+        onOpenChange={setIsPresetPickerOpen}
+        onSelectPreset={handleApplyPreset}
       />
 
       {/* Item Form Modal */}

@@ -16,6 +16,7 @@ export const columnDefSchema = z.object({
   max: z.number().optional(),
   showInTable: z.boolean().default(true),
   order: z.number().default(0),
+  width: z.number().optional(),
   // Config for quantity_units
   unitLabel: z.string().optional(),
   packSize: z.number().optional(),
