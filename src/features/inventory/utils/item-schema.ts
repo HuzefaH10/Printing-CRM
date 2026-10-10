@@ -52,12 +52,12 @@ export function buildItemZodSchema(columns: ColumnDef[]) {
         break;
       }
 
-      case "quantity_reams": {
-        let reamSchema = z.number().int("Total sheets must be an integer").min(0, "Quantity cannot be negative");
+      case "quantity_reams":
+      case "quantity_units": {
         if (col.required) {
-          shape[col.id] = reamSchema.min(1, `${col.label} is required`);
+          shape[col.id] = z.number().min(0.0001, `${col.label} is required`);
         } else {
-          shape[col.id] = reamSchema.optional();
+          shape[col.id] = z.number().min(0, "Quantity cannot be negative").optional();
         }
         break;
       }

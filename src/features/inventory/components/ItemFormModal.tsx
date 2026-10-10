@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ColumnDef, StockItem } from "../models/stock";
 import { buildItemZodSchema } from "../utils/item-schema";
 import { ReamsInput } from "./ReamsInput";
+import { UnitsInput } from "./UnitsInput";
 import { SizeSelectInput } from "./SizeSelectInput";
 import { stockItemRepo } from "../services/stock.repository";
 
@@ -40,11 +41,14 @@ export function ItemFormModal({
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { errors, isSubmitting }
   } = useForm<Record<string, any>>({
     resolver: zodResolver(schema),
     defaultValues: editingItem?.values || editingItem?.data || {}
   });
+
+  const selectedColour = watch("colour");
 
   useEffect(() => {
     if (open) {
@@ -57,7 +61,7 @@ export function ItemFormModal({
         } else if (col.defaultValue !== undefined) {
           initial[col.id] = col.defaultValue;
         } else {
-          initial[col.id] = col.type === "quantity_reams" ? 0 : col.type === "number" ? 0 : "";
+          initial[col.id] = (col.type === "quantity_reams" || col.type === "quantity_units") ? 0 : col.type === "number" ? 0 : "";
         }
       });
 
@@ -97,107 +101,130 @@ export function ItemFormModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 overflow-y-auto p-6 space-y-4">
-          {columns.map((col) => (
-            <div key={col.id} className="space-y-1.5">
-              <Label className="text-sm font-semibold flex items-center justify-between">
-                <span>
-                  {col.label}
-                  {col.required && <span className="text-destructive ml-1">*</span>}
-                </span>
-                {!col.showInTable && (
-                  <span className="text-[10px] text-muted-foreground uppercase font-normal bg-muted px-1.5 py-0.5 rounded">
-                    Hidden from table
+          {columns.map((col) => {
+            // Conditional display for pantoneCode: shown only when colour = Pantone/Custom
+            if (col.id === "pantoneCode" && selectedColour !== "Pantone/Custom" && !selectedColour?.includes("Pantone")) {
+              return null;
+            }
+
+            return (
+              <div key={col.id} className="space-y-1.5">
+                <Label className="text-sm font-semibold flex items-center justify-between">
+                  <span>
+                    {col.label}
+                    {col.required && <span className="text-destructive ml-1">*</span>}
                   </span>
-                )}
-              </Label>
-
-              {col.type === "text" && (
-                <Input
-                  {...register(col.id)}
-                  placeholder={`Enter ${col.label}...`}
-                  className="h-9"
-                />
-              )}
-
-              {col.type === "number" && (
-                <div className="relative">
-                  <Input
-                    type="number"
-                    step="any"
-                    min={col.min}
-                    max={col.max}
-                    {...register(col.id, { valueAsNumber: true })}
-                    placeholder={`Enter ${col.label}...`}
-                    className="h-9 font-mono"
-                  />
-                  {col.unit && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
-                      {col.unit}
+                  {!col.showInTable && (
+                    <span className="text-[10px] text-muted-foreground uppercase font-normal bg-muted px-1.5 py-0.5 rounded">
+                      Hidden from table
                     </span>
                   )}
-                </div>
-              )}
+                </Label>
 
-              {col.type === "select" && col.id === "size" && (
-                <Controller
-                  name={col.id}
-                  control={control}
-                  render={({ field }) => (
-                    <SizeSelectInput
-                      value={field.value}
-                      onChange={field.onChange}
-                      options={col.options}
-                      allowCustomOption={col.allowCustomOption ?? true}
+                {col.type === "text" && (
+                  <Input
+                    {...register(col.id)}
+                    placeholder={`Enter ${col.label}...`}
+                    className="h-9"
+                  />
+                )}
+
+                {col.type === "number" && (
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      step="any"
+                      min={col.min}
+                      max={col.max}
+                      {...register(col.id, { valueAsNumber: true })}
+                      placeholder={`Enter ${col.label}...`}
+                      className="h-9 font-mono"
                     />
-                  )}
-                />
-              )}
+                    {col.unit && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">
+                        {col.unit}
+                      </span>
+                    )}
+                  </div>
+                )}
 
-              {col.type === "select" && col.id !== "size" && (
-                <Controller
-                  name={col.id}
-                  control={control}
-                  render={({ field }) => (
-                    <Select
-                      value={field.value || ""}
-                      onValueChange={(val: string | null) => field.onChange(val || "")}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={`Select ${col.label}...`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(col.options || []).map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              )}
+                {col.type === "select" && col.id === "size" && (
+                  <Controller
+                    name={col.id}
+                    control={control}
+                    render={({ field }) => (
+                      <SizeSelectInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={col.options}
+                        allowCustomOption={col.allowCustomOption ?? true}
+                      />
+                    )}
+                  />
+                )}
 
-              {col.type === "quantity_reams" && (
-                <Controller
-                  name={col.id}
-                  control={control}
-                  render={({ field }) => (
-                    <ReamsInput
-                      value={field.value || 0}
-                      onChange={field.onChange}
-                      sheetsPerReam={sheetsPerReam}
-                    />
-                  )}
-                />
-              )}
+                {col.type === "select" && col.id !== "size" && (
+                  <Controller
+                    name={col.id}
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={(val: string | null) => field.onChange(val || "")}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={`Select ${col.label}...`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(col.options || []).map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                )}
 
-              {errors[col.id] && (
-                <p className="text-xs text-destructive mt-1">
-                  {String(errors[col.id]?.message)}
-                </p>
-              )}
-            </div>
-          ))}
+                {col.type === "quantity_units" && (
+                  <Controller
+                    name={col.id}
+                    control={control}
+                    render={({ field }) => (
+                      <UnitsInput
+                        value={field.value || 0}
+                        onChange={field.onChange}
+                        unitLabel={col.unitLabel || "tin"}
+                        packSize={col.packSize || 1}
+                        packUnit={col.packUnit || "kg"}
+                      />
+                    )}
+                  />
+                )}
+
+                {col.type === "quantity_reams" && (
+                  <Controller
+                    name={col.id}
+                    control={control}
+                    render={({ field }) => (
+                      <ReamsInput
+                        value={field.value || 0}
+                        onChange={field.onChange}
+                        sheetsPerReam={sheetsPerReam}
+                      />
+                    )}
+                  />
+                )}
+
+                {errors[col.id] && (
+                  <p className="text-xs text-destructive mt-1">
+                    {String(errors[col.id]?.message)}
+                  </p>
+                )}
+              </div>
+            );
+          })}
 
           <DialogFooter className="pt-4 border-t border-border/50">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

@@ -215,6 +215,7 @@ export default function StockCategoryPage({ params }: { params: any }) {
             columns={category.columns}
             data={filteredItems}
             sheetsPerReam={category.sheetsPerReam || 500}
+            reorderLevel={category.reorderLevel || 0}
             onDataChange={handleDataChange}
             onAddRow={handleAddRow}
             onDeleteRow={handleDeleteRow}
@@ -226,7 +227,7 @@ export default function StockCategoryPage({ params }: { params: any }) {
           <div className="p-12 text-center text-muted-foreground flex flex-col items-center">
             <p className="mb-4 text-base font-semibold">No columns defined for this category.</p>
             <p className="mb-6 text-sm text-muted-foreground/80 max-w-sm">
-              Use Column Settings to define custom columns or quickly apply the standard Paper columns preset.
+              Use Column Settings to select a category preset or define custom columns.
             </p>
             <Button onClick={() => setIsSettingsOpen(true)}>
               <Settings className="w-4 h-4 mr-2" /> Setup Columns

@@ -10,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { stockCategoryRepo } from "../services/stock.repository";
 import { StockCategory, ColumnDef } from "../models/stock";
-import { PAPER_PRESET_COLUMNS, mergePaperPreset, COMMON_GSM_SUGGESTIONS } from "../constants/paper-preset";
+import { CATEGORY_PRESETS, mergePreset, CategoryPreset } from "@/lib/inventory/presets";
+import { COMMON_GSM_SUGGESTIONS } from "../constants/paper-preset";
 import { AuditService } from "@/services/audit.service";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Trash2, ArrowUp, ArrowDown, Sparkles, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, Sparkles, Eye, EyeOff, Layers } from "lucide-react";
 
 interface ColumnSettingsModalProps {
   category: StockCategory;
@@ -29,7 +30,9 @@ export function ColumnSettingsModal({
   const { user } = useAuth();
   const [columns, setColumns] = useState<ColumnDef[]>(category.columns || []);
   const [sheetsPerReam, setSheetsPerReam] = useState<number>(category.sheetsPerReam || 500);
+  const [reorderLevel, setReorderLevel] = useState<number>(category.reorderLevel || 0);
   const [categoryName, setCategoryName] = useState<string>(category.name || "");
+  const [activePresetId, setActivePresetId] = useState<string | undefined>(category.presetId);
   const [isSaving, setIsSaving] = useState(false);
   const [newOptionInputs, setNewOptionInputs] = useState<Record<string, string>>({});
 
@@ -37,19 +40,30 @@ export function ColumnSettingsModal({
     if (category) {
       setColumns(category.columns || []);
       setSheetsPerReam(category.sheetsPerReam || 500);
+      setReorderLevel(category.reorderLevel || 0);
       setCategoryName(category.name || "");
+      setActivePresetId(category.presetId);
     }
   }, [category, open]);
 
-  const handleSave = async (updatedColumns: ColumnDef[], updatedSheetsPerReam: number, nameToSave?: string) => {
+  const handleSave = async (
+    updatedColumns: ColumnDef[],
+    updatedSheetsPerReam: number,
+    updatedReorderLevel: number,
+    nameToSave?: string,
+    presetIdToSave?: string
+  ) => {
     try {
       setIsSaving(true);
       const name = nameToSave ?? categoryName;
+      const presetId = presetIdToSave ?? activePresetId;
 
       await stockCategoryRepo.update(category.id!, {
         name,
         columns: updatedColumns,
-        sheetsPerReam: updatedSheetsPerReam
+        sheetsPerReam: updatedSheetsPerReam,
+        reorderLevel: updatedReorderLevel,
+        presetId
       });
 
       await AuditService.logEvent({
@@ -57,8 +71,8 @@ export function ColumnSettingsModal({
         entityType: "category_columns",
         action: "UPDATED",
         userId: user?.uid,
-        oldValue: { columns: category.columns, sheetsPerReam: category.sheetsPerReam },
-        newValue: { columns: updatedColumns, sheetsPerReam: updatedSheetsPerReam },
+        oldValue: { columns: category.columns, reorderLevel: category.reorderLevel },
+        newValue: { columns: updatedColumns, reorderLevel: updatedReorderLevel, presetId },
         reason: "Updated category column settings"
       });
     } catch (err) {
@@ -68,10 +82,22 @@ export function ColumnSettingsModal({
     }
   };
 
-  const handleAddPaperPreset = async () => {
-    const merged = mergePaperPreset(columns);
+  const handleApplyPreset = async (preset: CategoryPreset) => {
+    const merged = mergePreset(columns, preset.columns);
+    const newPerReam = preset.sheetsPerReam ?? sheetsPerReam;
     setColumns(merged);
-    await handleSave(merged, sheetsPerReam);
+    setSheetsPerReam(newPerReam);
+    setActivePresetId(preset.id);
+
+    await handleSave(merged, newPerReam, reorderLevel, undefined, preset.id);
+
+    await AuditService.logEvent({
+      entityId: category.id!,
+      entityType: "category_preset",
+      action: "PRESET_APPLIED",
+      userId: user?.uid,
+      reason: `Applied ${preset.label} category preset`
+    });
   };
 
   const handleAddColumn = () => {
@@ -86,19 +112,19 @@ export function ColumnSettingsModal({
     };
     const updated = [...columns, newCol];
     setColumns(updated);
-    handleSave(updated, sheetsPerReam);
+    handleSave(updated, sheetsPerReam, reorderLevel);
   };
 
   const handleColumnUpdate = (colId: string, updates: Partial<ColumnDef>) => {
     const updated = columns.map(c => (c.id === colId ? { ...c, ...updates } : c));
     setColumns(updated);
-    handleSave(updated, sheetsPerReam);
+    handleSave(updated, sheetsPerReam, reorderLevel);
   };
 
   const handleDeleteColumn = (colId: string) => {
     const updated = columns.filter(c => c.id !== colId);
     setColumns(updated);
-    handleSave(updated, sheetsPerReam);
+    handleSave(updated, sheetsPerReam, reorderLevel);
   };
 
   const handleMoveColumn = (index: number, direction: "up" | "down") => {
@@ -113,7 +139,7 @@ export function ColumnSettingsModal({
 
     const reordered = newCols.map((col, idx) => ({ ...col, order: idx + 1 }));
     setColumns(reordered);
-    handleSave(reordered, sheetsPerReam);
+    handleSave(reordered, sheetsPerReam, reorderLevel);
   };
 
   const handleAddOption = (colId: string) => {
@@ -128,7 +154,6 @@ export function ColumnSettingsModal({
 
     const updatedOptions = [...currentOptions, inputVal];
     handleColumnUpdate(colId, { options: updatedOptions });
-
     setNewOptionInputs(prev => ({ ...prev, [colId]: "" }));
   };
 
@@ -155,12 +180,6 @@ export function ColumnSettingsModal({
     handleColumnUpdate(colId, { options: newOpts });
   };
 
-  const handleSheetsPerReamChange = (val: number) => {
-    const safeVal = Math.max(1, Math.floor(val || 500));
-    setSheetsPerReam(safeVal);
-    handleSave(columns, safeVal);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
@@ -169,40 +188,57 @@ export function ColumnSettingsModal({
             Column Settings: {category.name}
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Customize category attributes, data types, validation rules, and ream sizing.
+            Configure category attributes, preset templates, data types, and reorder levels.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Quick Start Preset Callout (Fixed Layout Bug: no overflow, w-full, max-w-full, break-words) */}
-          <div className="w-full max-w-full break-words bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg border border-amber-200 dark:border-amber-800/60 text-sm overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <p className="font-semibold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                Quick start: add the standard Paper columns.
-              </p>
-              <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
-                Adds Paper Type, GSM, Size, and Quantity (Reams) to this category without overwriting existing columns.
-              </p>
+          {/* Preset Picker Section */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-amber-500" /> Category Presets
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {Object.values(CATEGORY_PRESETS).map((preset) => (
+                <div
+                  key={preset.id}
+                  className={`p-3.5 rounded-lg border transition-all flex flex-col justify-between space-y-2 ${
+                    activePresetId === preset.id
+                      ? "border-primary bg-primary/5 dark:bg-primary/10"
+                      : "border-border/60 hover:border-border bg-card"
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm">{preset.label}</span>
+                      {activePresetId === preset.id && (
+                        <Badge variant="default" className="text-[10px] h-4">Active</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{preset.description}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={activePresetId === preset.id ? "secondary" : "outline"}
+                    onClick={() => handleApplyPreset(preset)}
+                    className="w-full h-7 text-xs mt-2"
+                  >
+                    Apply {preset.label} Columns
+                  </Button>
+                </div>
+              ))}
             </div>
-            <Button
-              onClick={handleAddPaperPreset}
-              size="sm"
-              className="bg-amber-600 hover:bg-amber-700 text-white shrink-0 self-start sm:self-center"
-            >
-              Add Paper columns
-            </Button>
           </div>
 
           {/* Category Configuration */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-lg bg-muted/20 border border-border/50">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-lg bg-muted/20 border border-border/50">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Category Name</Label>
               <Input
                 value={categoryName}
                 onChange={(e) => {
                   setCategoryName(e.target.value);
-                  handleSave(columns, sheetsPerReam, e.target.value);
+                  handleSave(columns, sheetsPerReam, reorderLevel, e.target.value);
                 }}
                 placeholder="e.g. Paper Stock"
                 className="h-9"
@@ -210,17 +246,38 @@ export function ColumnSettingsModal({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold flex items-center justify-between">
-                <span>Sheets Per Ream (sheetsPerReam)</span>
-                <span className="text-[10px] text-muted-foreground font-normal">Default: 500</span>
-              </Label>
+              <Label className="text-xs font-semibold">Sheets Per Ream</Label>
               <Input
                 type="number"
                 min={1}
                 step={1}
                 value={sheetsPerReam}
-                onChange={(e) => handleSheetsPerReamChange(parseInt(e.target.value, 10))}
+                onChange={(e) => {
+                  const val = Math.max(1, parseInt(e.target.value, 10) || 500);
+                  setSheetsPerReam(val);
+                  handleSave(columns, val, reorderLevel);
+                }}
                 placeholder="500"
+                className="h-9 font-mono"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold flex items-center justify-between">
+                <span>Low-Stock Reorder Level</span>
+                <span className="text-[10px] text-muted-foreground font-normal">(Base unit)</span>
+              </Label>
+              <Input
+                type="number"
+                min={0}
+                step="any"
+                value={reorderLevel || ""}
+                onChange={(e) => {
+                  const val = Math.max(0, parseFloat(e.target.value) || 0);
+                  setReorderLevel(val);
+                  handleSave(columns, sheetsPerReam, val);
+                }}
+                placeholder="e.g. 100"
                 className="h-9 font-mono"
               />
             </div>
@@ -239,9 +296,9 @@ export function ColumnSettingsModal({
           {/* Columns List */}
           {columns.length === 0 ? (
             <div className="p-8 text-center border-2 border-dashed rounded-lg text-muted-foreground">
-              <p className="text-sm">No columns created yet.</p>
+              <p className="text-sm font-semibold">No columns created yet.</p>
               <p className="text-xs mt-1 text-muted-foreground/70">
-                Click "Add Paper columns" above or "Add Column" to get started.
+                Choose a category preset above or click "Add Column" to get started.
               </p>
             </div>
           ) : (
@@ -334,7 +391,7 @@ export function ColumnSettingsModal({
                       <Select
                         value={col.type}
                         onValueChange={(val: string | null) => {
-                          if (val && ["text", "number", "select", "quantity_reams"].includes(val)) {
+                          if (val && ["text", "number", "select", "quantity_reams", "quantity_units"].includes(val)) {
                             handleColumnUpdate(col.id, { type: val as ColumnDef["type"] });
                           }
                         }}
@@ -346,6 +403,7 @@ export function ColumnSettingsModal({
                           <SelectItem value="text">text</SelectItem>
                           <SelectItem value="number">number</SelectItem>
                           <SelectItem value="select">select</SelectItem>
+                          <SelectItem value="quantity_units">quantity_units</SelectItem>
                           <SelectItem value="quantity_reams">quantity_reams</SelectItem>
                         </SelectContent>
                       </Select>
@@ -361,6 +419,40 @@ export function ColumnSettingsModal({
                       />
                     </div>
                   </div>
+
+                  {/* Config for quantity_units */}
+                  {(col.type === "quantity_units" || col.type === "quantity_reams") && (
+                    <div className="grid grid-cols-3 gap-3 p-3 rounded bg-muted/30 border border-border/40">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Unit Label (e.g. tin, box, bottle)</Label>
+                        <Input
+                          value={col.unitLabel || ""}
+                          onChange={(e) => handleColumnUpdate(col.id, { unitLabel: e.target.value })}
+                          placeholder="tin"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Pack Size</Label>
+                        <Input
+                          type="number"
+                          value={col.packSize ?? ""}
+                          onChange={(e) => handleColumnUpdate(col.id, { packSize: parseFloat(e.target.value) || 1 })}
+                          placeholder="1"
+                          className="h-8 text-xs font-mono"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Pack Base Unit (e.g. kg, L, pcs)</Label>
+                        <Input
+                          value={col.packUnit || ""}
+                          onChange={(e) => handleColumnUpdate(col.id, { packUnit: e.target.value })}
+                          placeholder="kg"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap items-center gap-6 pt-1 border-t border-border/30 text-xs">
                     <div className="flex items-center gap-2">
@@ -389,53 +481,6 @@ export function ColumnSettingsModal({
                       </div>
                     )}
                   </div>
-
-                  {col.type === "number" && (
-                    <div className="space-y-2 pt-2 border-t border-border/30">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Min Value</Label>
-                          <Input
-                            type="number"
-                            value={col.min ?? ""}
-                            onChange={(e) => handleColumnUpdate(col.id, { min: e.target.value !== "" ? parseFloat(e.target.value) : undefined })}
-                            placeholder="No min"
-                            className="h-8 font-mono text-xs"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Max Value</Label>
-                          <Input
-                            type="number"
-                            value={col.max ?? ""}
-                            onChange={(e) => handleColumnUpdate(col.id, { max: e.target.value !== "" ? parseFloat(e.target.value) : undefined })}
-                            placeholder="No max"
-                            className="h-8 font-mono text-xs"
-                          />
-                        </div>
-                      </div>
-
-                      {(col.unit === "gsm" || col.id === "gsm") && (
-                        <div className="space-y-1">
-                          <Label className="text-[11px] text-muted-foreground">Common GSM presets:</Label>
-                          <div className="flex flex-wrap gap-1">
-                            {COMMON_GSM_SUGGESTIONS.map((gsm) => (
-                              <Button
-                                key={gsm}
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-6 px-1.5 text-[10px] font-mono"
-                                onClick={() => handleColumnUpdate(col.id, { min: 40, max: 500 })}
-                              >
-                                {gsm}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   {col.type === "select" && (
                     <div className="space-y-3 pt-2 border-t border-border/30">

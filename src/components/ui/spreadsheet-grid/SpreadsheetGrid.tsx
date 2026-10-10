@@ -1,16 +1,19 @@
 "use client";
 
 import React, { useState, useRef, useEffect, KeyboardEvent } from "react";
-import { StockColumn, StockItem, CustomSizeValue } from "@/features/inventory/models/stock";
-import { ChevronRight, ChevronDown, Plus, Trash2, Copy as CopyIcon, MoreHorizontal } from "lucide-react";
+import { StockColumn, StockItem } from "@/features/inventory/models/stock";
+import { ChevronRight, ChevronDown, Plus, Trash2, Copy as CopyIcon, MoreHorizontal, AlertTriangle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatReams, splitSheets } from "@/lib/reams";
+import { Badge } from "@/components/ui/badge";
+import { formatUnits } from "@/lib/units";
+import { eventBus } from "@/lib/events/event-bus";
 
 interface SpreadsheetGridProps {
   columns: StockColumn[];
   data: StockItem[];
   sheetsPerReam?: number;
+  reorderLevel?: number;
   onDataChange: (id: string, field: string, value: any) => void;
   onAddRow: (groupedValue?: string) => void;
   onDeleteRow: (id: string) => void;
@@ -24,6 +27,7 @@ export function SpreadsheetGrid({
   columns,
   data,
   sheetsPerReam = 500,
+  reorderLevel = 0,
   onDataChange,
   onAddRow,
   onDeleteRow,
@@ -39,7 +43,10 @@ export function SpreadsheetGrid({
   const tableColumns = columns.filter(col => col.showInTable !== false);
 
   // Filter out soft deleted items
-  const activeItems = data.filter(item => !item.deletedAt);
+  const activeItems = data.filter(item => !item.isDeleted && !item.deletedAt);
+
+  // Find stock column for low-stock reorderLevel check
+  const stockColumn = columns.find(c => c.type === "quantity_units" || c.type === "quantity_reams" || c.id === "stock" || c.id === "reams");
 
   // Grouping logic
   const groupedData = React.useMemo(() => {
@@ -95,7 +102,7 @@ export function SpreadsheetGrid({
 
   const startEditing = (rowId: string, colId: string, currentValue: any, type: string) => {
     setEditingCell({ rowId, colId });
-    if (type === "quantity_reams") {
+    if (type === "quantity_reams" || type === "quantity_units") {
       setEditValue(currentValue ?? 0);
     } else if (typeof currentValue === "object" && currentValue !== null && "w" in currentValue) {
       setEditValue(`${currentValue.w}x${currentValue.h}`);
@@ -116,8 +123,8 @@ export function SpreadsheetGrid({
       finalValue = parseFloat(editValue) || 0;
       if (col.min !== undefined) finalValue = Math.max(col.min, finalValue);
       if (col.max !== undefined) finalValue = Math.min(col.max, finalValue);
-    } else if (col?.type === "quantity_reams") {
-      finalValue = Math.max(0, parseInt(editValue, 10) || 0);
+    } else if (col?.type === "quantity_reams" || col?.type === "quantity_units") {
+      finalValue = Math.max(0, parseFloat(editValue) || 0);
     }
 
     onDataChange(editingCell.rowId, editingCell.colId, finalValue);
@@ -128,9 +135,30 @@ export function SpreadsheetGrid({
     const itemVals = item.values || item.data || {};
     const val = itemVals[col.id];
 
+    if (col.type === "quantity_units") {
+      const totalBase = typeof val === "number" ? val : parseFloat(val || "0") || 0;
+      const packSize = col.packSize ?? (col.id === "reams" ? sheetsPerReam : 1);
+      const unitLabel = col.unitLabel || (col.id === "reams" ? "ream" : "pack");
+      const packUnit = col.packUnit || (col.id === "reams" ? "sheets" : "pcs");
+
+      const formatted = formatUnits(totalBase, packSize, unitLabel, packUnit);
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger className="font-mono cursor-help inline-flex items-center gap-1 font-semibold text-primary">
+              {formatted}
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="font-mono text-xs">= {totalBase.toLocaleString()} {packUnit}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+
     if (col.type === "quantity_reams") {
       const totalSheets = typeof val === "number" ? val : parseInt(val || "0", 10) || 0;
-      const formatted = formatReams(totalSheets, sheetsPerReam);
+      const formatted = formatUnits(totalSheets, sheetsPerReam, "ream", "sheets");
       return (
         <TooltipProvider>
           <Tooltip>
@@ -170,7 +198,7 @@ export function SpreadsheetGrid({
               <th
                 key={col.id}
                 className={`px-4 py-2.5 font-semibold text-foreground/80 ${
-                  col.type === "number" || col.type === "quantity_reams" ? "text-right" : ""
+                  col.type === "number" || col.type === "quantity_reams" || col.type === "quantity_units" ? "text-right" : ""
                 }`}
               >
                 {col.label}
@@ -220,10 +248,23 @@ export function SpreadsheetGrid({
               {expandedGroups[groupName] !== false &&
                 items.map((item, rowIndex) => {
                   const itemVals = item.values || item.data || {};
+                  const stockVal = stockColumn ? Number(itemVals[stockColumn.id] || 0) : 0;
+                  const isLowStock = reorderLevel > 0 && stockVal <= reorderLevel;
+
+                  if (isLowStock) {
+                    eventBus.publish("INVENTORY_LOW_STOCK", {
+                      itemId: item.id,
+                      currentStock: stockVal,
+                      reorderLevel
+                    });
+                  }
+
                   return (
                     <tr
                       key={item.id}
-                      className="border-b border-border/40 hover:bg-muted/20 transition-colors group"
+                      className={`border-b border-border/40 hover:bg-muted/20 transition-colors group ${
+                        isLowStock ? "bg-amber-500/5 dark:bg-amber-500/10" : ""
+                      }`}
                     >
                       <td className="px-3 py-2 text-center text-muted-foreground border-r border-border/30 bg-muted/10 font-mono text-xs">
                         {rowIndex + 1}
@@ -237,7 +278,7 @@ export function SpreadsheetGrid({
                           <td
                             key={col.id}
                             className={`px-4 py-2 border-r border-border/30 relative ${
-                              col.type === "number" || col.type === "quantity_reams" ? "text-right" : ""
+                              col.type === "number" || col.type === "quantity_reams" || col.type === "quantity_units" ? "text-right" : ""
                             }`}
                             onClick={() => !isEditing && startEditing(item.id!, col.id, cellVal, col.type)}
                           >
@@ -261,7 +302,7 @@ export function SpreadsheetGrid({
                               ) : (
                                 <input
                                   ref={inputRef as any}
-                                  type={col.type === "number" || col.type === "quantity_reams" ? "number" : "text"}
+                                  type={col.type === "number" || col.type === "quantity_reams" || col.type === "quantity_units" ? "number" : "text"}
                                   value={typeof editValue === "string" || typeof editValue === "number" ? editValue : ""}
                                   onChange={e => setEditValue(e.target.value)}
                                   onBlur={commitEdit}
@@ -271,11 +312,18 @@ export function SpreadsheetGrid({
                                 />
                               )
                             ) : (
-                              <div className="min-h-[22px] flex items-center">
-                                {col.type === "number" || col.type === "quantity_reams" ? (
-                                  <div className="w-full text-right">{renderCellContent(item, col)}</div>
-                                ) : (
-                                  renderCellContent(item, col)
+                              <div className="min-h-[22px] flex items-center justify-between gap-2">
+                                <div className="w-full">
+                                  {col.type === "number" || col.type === "quantity_reams" || col.type === "quantity_units" ? (
+                                    <div className="w-full text-right">{renderCellContent(item, col)}</div>
+                                  ) : (
+                                    renderCellContent(item, col)
+                                  )}
+                                </div>
+                                {isLowStock && (stockColumn?.id === col.id || colIndex === 0) && (
+                                  <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-300 text-[10px] px-1.5 py-0 shrink-0">
+                                    Low Stock
+                                  </Badge>
                                 )}
                               </div>
                             )}

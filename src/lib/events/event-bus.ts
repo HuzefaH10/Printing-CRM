@@ -8,7 +8,8 @@ export type AppEventType =
   | "MODAL_CLOSED"
   | "THEME_CHANGED"
   | "COMPANY_ACTIVITY_LOGGED"
-  | "COMPANY_ACTIVITY_COMPLETED";
+  | "COMPANY_ACTIVITY_COMPLETED"
+  | "INVENTORY_LOW_STOCK";
 
 export interface AppEvent<T = any> {
   type: AppEventType;
